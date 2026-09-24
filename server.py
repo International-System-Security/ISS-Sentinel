@@ -2,6 +2,13 @@ from flask import Flask, jsonify, request
 
 app = Flask(__name__)
 
+
+# 1. এই নতুন হোম রাউটটি এখানে যোগ করা হলো (যাতে ব্রাউজারে লিংক ওপেন করলে মেসেজ দেখায়)
+@app.route("/", methods=["GET"])
+def home():
+  return "ISS Cloud Antivirus Backend is Running Successfully!"
+
+
 # উদাহরণস্বরূপ জানা কিছু ভাইরাসের হ্যাশ (Malware Signatures)
 KNOWN_THREATS = [
     "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -28,5 +35,4 @@ def scan_file():
 
 
 if __name__ == "__main__":
-  # Codespaces ক্লাউডের জন্য পোর্ট ৫০০০ এ সার্ভার চালু করা
   app.run(host="0.0.0.0", port=5000)
