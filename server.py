@@ -45,7 +45,7 @@ def home():
     <p>Admin Dashboard: <a href='/admin?key=my_super_secret_admin_key_123'>/admin</a></p>
     """
 
-# ১. অ্যাডমিন ড্যাশবোর্ড (1 Month/Year + Side-by-side Calendar and Plan Selector)
+# ১. অ্যাডমিন ড্যাশবোর্ড
 @app.route("/admin", methods=["GET"])
 def admin_panel():
     key = request.args.get("key")
@@ -116,7 +116,7 @@ def admin_panel():
                         <option value="Custom-Duration">Custom Duration (Use Calendar & Plan Selector Below)</option>
                     </select>
 
-                    <label>Custom Expiry Date & Plan Selector (পাশাপাশি অপশন):</label>
+                    <label>Custom Expiry Date & Plan Selector:</label>
                     <div class="side-by-side">
                         <input type="date" name="custom_expiry" value="{default_expiry}">
                         <select name="custom_plan_type">
@@ -125,7 +125,7 @@ def admin_panel():
                             <option value="Enterprise (Custom/Trial)">Enterprise</option>
                         </select>
                     </div>
-                    <small style="color: #64748b; display: block; margin-top: 6px; margin-bottom: 12px;">(যদি কাউকে নির্দিষ্ট দিন বা ট্রায়াল দিতে চান, তবে ওপরের অপশনে 'Custom Duration' সিলেক্ট করে এখান থেকে ক্যালেন্ডারে ডেট এবং পাশে প্ল্যান সিলেক্ট করে দিন)</small>
+                    <small style="color: #64748b; display: block; margin-top: 6px; margin-bottom: 12px;">(যদি নির্দিষ্ট দিন বা ট্রায়াল দিতে চান, তবে ওপরের অপশনে 'Custom Duration' সিলেক্ট করে এখান থেকে ক্যালেন্ডারে ডেট এবং পাশে প্ল্যান সিলেক্ট করে দিন)</small>
 
                     <button type="submit">Create License ID</button>
                 </form>
@@ -159,7 +159,7 @@ def add_client():
     license_key = request.form.get("license")
     plan_choice = request.form.get("plan_choice")
     custom_expiry = request.form.get("custom_expiry")
-    custom_plan_type = request.form.get("custom_plan_type")
+    custom_plan_type = request.form.get("custom_plan_type", "Standard (Custom)")
 
     if admin_key != ADMIN_SECRET_KEY:
         return "Unauthorized!", 401
@@ -167,10 +167,10 @@ def add_client():
     max_devices = 3
     final_plan_type = plan_choice
 
-    # যদি Custom Duration সিলেক্ট করা হয়, তবে ক্যালেন্ডার ডেট এবং পাশের প্ল্যান টাইপ ব্যবহার হবে
+    # যদি Custom Duration সিলেক্ট করা হয়
     if plan_choice == "Custom-Duration":
         expiry_date = custom_expiry if custom_expiry else (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
-        final_plan_type = custom_plan_type  # যেমন: Basic, Standard বা Enterprise
+        final_plan_type = custom_plan_type  
         
         if "Basic" in custom_plan_type:
             max_devices = 1
@@ -192,8 +192,8 @@ def add_client():
 
     licenses = load_licenses()
     licenses[license_key] = {
-        "name": client_name,
-        "org": org_name,
+        "name": client_name if client_name else "Unknown",
+        "org": org_name if org_name else "Unknown",
         "expiry": expiry_date,
         "max_devices": max_devices,
         "plan_type": final_plan_type,
