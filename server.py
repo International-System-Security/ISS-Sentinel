@@ -45,7 +45,7 @@ def home():
     <p>Admin Dashboard: <a href='/admin?key=my_super_secret_admin_key_123'>/admin</a></p>
     """
 
-# ১. অ্যাডমিন ড্যাশবোর্ড (Mobile & PC Responsive)
+# ১. অ্যাডমিন ড্যাশবোর্ড (Calendar & Plans Included)
 @app.route("/admin", methods=["GET"])
 def admin_panel():
     key = request.args.get("key")
@@ -67,6 +67,9 @@ def admin_panel():
             <td><code>{connected_list}</code></td>
         </tr>
         """
+
+    # ডিফল্টভাবে আজকের তারিখ থেকে ৩০ দিন পরের তারিখ ক্যালেন্ডারে দেখানোর জন্য
+    default_expiry = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
 
     html_page = f"""
     <!DOCTYPE html>
@@ -99,12 +102,19 @@ def admin_panel():
                     <input type="text" name="org" required>
                     <label>License ID:</label>
                     <input type="text" name="license" placeholder="e.g. iss-1111-2026" required>
-                    <label>Plan:</label>
+                    
+                    <label>Select Plan Type:</label>
                     <select name="plan_choice">
                         <option value="Basic-Monthly">Basic Plan (1 Device - Monthly)</option>
                         <option value="Standard-Monthly">Standard Plan (3 Devices - Monthly)</option>
                         <option value="Enterprise-Monthly">Enterprise Plan (5 Devices - Monthly)</option>
+                        <option value="Custom-Duration">Custom Duration (2, 3 months or specific)</option>
                     </select>
+
+                    <label>Custom Expiry Date (Calendar):</label>
+                    <input type="date" name="custom_expiry" value="{default_expiry}">
+                    <small style="color: #64748b; display: block; margin-top: -8px; margin-bottom: 10px;">(২ বা ৩ মাসের জন্য দিলে এখান থেকে তারিখ সিলেক্ট করুন)</small>
+
                     <button type="submit">Create License ID</button>
                 </form>
             </div>
@@ -136,6 +146,7 @@ def add_client():
     org_name = request.form.get("org")
     license_key = request.form.get("license")
     plan_choice = request.form.get("plan_choice")
+    custom_expiry = request.form.get("custom_expiry")
 
     if admin_key != ADMIN_SECRET_KEY:
         return "Unauthorized!", 401
@@ -146,7 +157,8 @@ def add_client():
     elif "Enterprise" in plan_choice:
         max_devices = 5
 
-    expiry_date = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+    # ক্যালেন্ডার থেকে সিলেক্ট করা ডেট ব্যবহার করা, আর যদি কোনো কারণে ফাকা থাকে তবে ডিফল্ট ৩০ দিন
+    expiry_date = custom_expiry if custom_expiry else (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
 
     licenses = load_licenses()
     licenses[license_key] = {
@@ -161,12 +173,12 @@ def add_client():
 
     return f"""
     <body style="font-family: Arial; padding: 30px; text-align: center;">
-        <h3>Success! License ID <b>{license_key}</b> created.</h3>
+        <h3>Success! License ID <b>{license_key}</b> created with expiry date: {expiry_date}</h3>
         <a href="/admin?key={ADMIN_SECRET_KEY}" style="background: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 15px;">Back to Dashboard</a>
     </body>
     """
 
-# ২. ক্লায়েন্ট পোর্টাল লগইন (Mobile & PC Responsive)
+# ২. ক্লায়েন্ট পোর্টাল লগইন
 @app.route("/client-login", methods=["GET", "POST"])
 def client_login():
     error_msg = ""
@@ -208,7 +220,7 @@ def client_login():
     </html>
     """)
 
-# ৩. ক্লায়েন্ট ড্যাশবোর্ড ও ওয়ান-ক্লিক সেটআপ (Mobile & PC Responsive)
+# ৩. ক্লায়েন্ট ড্যাশবোর্ড ও ওয়ান-ক্লিক সেটআপ
 @app.route("/client-dashboard", methods=["GET", "POST"])
 def client_dashboard():
     license_key = session.get('active_license')
