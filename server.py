@@ -3,22 +3,16 @@ import os
 from flask import Flask, redirect, render_template_string, request, session, url_for
 
 app = Flask(__name__)
-app.secret_key = "iss_enterprise_security_secret_key_v9"
+app.secret_key = "iss_enterprise_security_secret_key_v10"
 
 USER_FILE = "users.txt"
 POST_FILE = "posts.txt"
 INQUIRY_FILE = "inquiries.txt"
 TICKET_FILE = "tickets.txt"
 LICENSE_FILE = "licenses.txt"
+ADMIN_LIST_FILE = "admins.txt"
 
-MASTER_ADMIN_DOMAIN = "iss.com"
-
-# Authorized Admin Emails granted by you (Master Admin)
-AUTHORIZED_ADMIN_EMAILS = [
-    "admin@iss.com",
-    "boss@iss.com",
-    "security@iss.com"
-]
+OWNER_EMAIL = "iss@owner.com"
 
 # Exact Verified Blue Badge SVG for Admins
 ADMIN_BADGE_SVG = '''
@@ -35,6 +29,34 @@ TRUSTED_BLACK_BADGE_SVG = '''
     <path d="M9 16.2L4.8 12L6.2 10.6L9 13.4L17.8 4.6L19.2 6L9 16.2Z" fill="#38bdf8"/>
 </svg>
 '''
+
+def load_admin_emails():
+    admins = [OWNER_EMAIL, "admin@iss.com"]
+    if os.path.exists(ADMIN_LIST_FILE):
+        with open(ADMIN_LIST_FILE, "r") as f:
+            for line in f:
+                em = line.strip()
+                if em and em not in admins:
+                    admins.append(em)
+    return admins
+
+def save_admin_email(email):
+    admins = load_admin_emails()
+    if email not in admins:
+        admins.append(email)
+        with open(ADMIN_LIST_FILE, "w") as f:
+            for ad in admins:
+                if ad != OWNER_EMAIL and ad != "admin@iss.com":
+                    f.write(ad + "\n")
+
+def remove_admin_email(email):
+    admins = load_admin_emails()
+    if email in admins and email != OWNER_EMAIL:
+        admins.remove(email)
+        with open(ADMIN_LIST_FILE, "w") as f:
+            for ad in admins:
+                if ad != OWNER_EMAIL and ad != "admin@iss.com":
+                    f.write(ad + "\n")
 
 def load_users():
     users = {}
@@ -60,7 +82,7 @@ def load_users():
                     }
     if "admin" not in users:
         users["admin"] = {
-            "email": "admin@iss.com", "password": "admin", "role": "Admin",
+            "email": OWNER_EMAIL, "password": "admin", "role": "Admin",
             "pic": "https://i.imgur.com/6VBx3io.png", "verified": True, "trusted": False,
             "last_active": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
@@ -313,10 +335,11 @@ def home():
     </html>
     """)
 
-# --- MY PROFILE (Login / Register with Select Role & Authorized Admin Email Verification) ---
+# --- MY PROFILE ---
 @app.route("/my-profile", methods=["GET", "POST"])
 def my_profile():
     users = load_users()
+    admin_emails = load_admin_emails()
     msg = ""
     error = ""
 
@@ -326,7 +349,7 @@ def my_profile():
             uname = request.form.get("username").strip()
             email = request.form.get("email").strip()
             pwd = request.form.get("password").strip()
-            selected_role = request.form.get("role_selection") # "Member" or "Administrator"
+            selected_role = request.form.get("role_selection")
             pic = request.form.get("pic").strip() or "https://i.imgur.com/6VBx3io.png"
 
             if uname in users:
@@ -334,8 +357,7 @@ def my_profile():
             else:
                 role = "User"
                 if selected_role == "Administrator":
-                    # Check if email matches master admin domain or authorized admin emails granted by admin
-                    if MASTER_ADMIN_DOMAIN in email or email in AUTHORIZED_ADMIN_EMAILS:
+                    if email in admin_emails:
                         role = "Admin"
                     else:
                         error = "Unauthorized! This email is not authorized for Administrator access."
@@ -360,7 +382,7 @@ def my_profile():
                 user_email = users[uname]["email"]
 
                 if selected_role == "Administrator":
-                    if user_role != "Admin" or (MASTER_ADMIN_DOMAIN not in user_email and user_email not in AUTHORIZED_ADMIN_EMAILS):
+                    if user_role != "Admin" or user_email not in admin_emails:
                         error = "This account does not have authorized Administrator privileges!"
                     else:
                         session["username"] = uname
@@ -478,7 +500,7 @@ def my_profile():
 
             <div id="login-form">
                 <h3>Account Login</h3>
-                <p style="font-size:12px; color:var(--text-muted);">Master Admin: <b>admin / admin</b> (admin@iss.com)</p>
+                <p style="font-size:12px; color:var(--text-muted);">Owner: <b>admin / admin</b> ({OWNER_EMAIL})</p>
                 <form method="POST">
                     <input type="hidden" name="action" value="login">
                     <label style="font-size:12px; color:var(--text-muted);">Select Role</label>
@@ -525,7 +547,7 @@ def logout():
     session.pop("username", None)
     return redirect(url_for("home"))
 
-# --- 2. ADMIN PANEL (Protected Dashboard) ---
+# --- 2. ADMIN PANEL (With Admin Email Manager & Full License Creator) ---
 @app.route("/admin", methods=["GET", "POST"])
 def admin_panel():
     users = load_users()
@@ -536,7 +558,17 @@ def admin_panel():
     msg = ""
     if request.method == "POST":
         action = request.form.get("action")
-        if action == "delete_license":
+        if action == "add_admin_email":
+            new_em = request.form.get("new_admin_email", "").strip()
+            if new_em:
+                save_admin_email(new_em)
+                msg = f"✅ Admin email '{new_em}' authorized successfully!"
+        elif action == "remove_admin_email":
+            rem_em = request.form.get("remove_email", "").strip()
+            if rem_em:
+                remove_admin_email(rem_em)
+                msg = f"🗑️ Admin email '{rem_em}' removed successfully!"
+        elif action == "delete_license":
             lic_key = request.form.get("lic_key")
             licenses = load_licenses()
             if lic_key in licenses:
@@ -547,14 +579,21 @@ def admin_panel():
             l_key = request.form.get("l_key")
             l_name = request.form.get("l_name")
             l_org = request.form.get("l_org")
+            l_expiry = request.form.get("l_expiry", "2027-01-01")
+            l_plan = request.form.get("l_plan", "Enterprise")
             l_user = request.form.get("l_user", "admin")
             l_pwd = request.form.get("l_pwd", "admin")
+            
             licenses = load_licenses()
-            licenses[l_key] = {"name": l_name, "org": l_org, "expiry": "2027-01-01", "max": "3", "plan": "Enterprise", "client_user": l_user, "client_pwd": l_pwd}
+            licenses[l_key] = {
+                "name": l_name, "org": l_org, "expiry": l_expiry,
+                "max": "5", "plan": l_plan, "client_user": l_user, "client_pwd": l_pwd
+            }
             save_licenses(licenses)
-            msg = f"✅ License '{l_key}' created successfully!"
+            msg = f"✅ License '{l_key}' created successfully with plan '{l_plan}'!"
 
     licenses = load_licenses()
+    admin_emails = load_admin_emails()
     inquiries = []
     if os.path.exists(INQUIRY_FILE):
         with open(INQUIRY_FILE, "r") as f:
@@ -576,7 +615,7 @@ def admin_panel():
             table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
             th, td {{ border: 1px solid #1e293b; padding: 12px; text-align: left; font-size: 13px; }}
             th {{ background: #1a2234; color: #38bdf8; }}
-            input, button {{ padding: 10px; margin: 5px 0; background: #060913; border: 1px solid #334155; color: white; border-radius: 6px; box-sizing: border-box; }}
+            input, select, button {{ padding: 10px; margin: 5px 0; background: #060913; border: 1px solid #334155; color: white; border-radius: 6px; box-sizing: border-box; }}
             button {{ background: #0ea5e9; font-weight: bold; cursor: pointer; border: none; }}
         </style>
     </head>
@@ -588,25 +627,45 @@ def admin_panel():
 
         {f'<div style="background: rgba(16,185,129,0.1); border: 1px solid #10b981; color: #34d399; padding: 12px; border-radius: 8px; margin-bottom: 20px;">{msg}</div>' if msg else ''}
 
+        <!-- Manage Admin Emails Section -->
+        <div class="box">
+            <h3>👥 Manage Authorized Admin Emails</h3>
+            <p style="font-size:13px; color:#94a3b8;">Owner Email: <code style="color:#38bdf8;">{OWNER_EMAIL}</code>. Add or remove emails permitted to use the Administrator role.</p>
+            <form method="POST" style="display:flex; gap:10px; margin-bottom:15px;">
+                <input type="hidden" name="action" value="add_admin_email">
+                <input type="email" name="new_admin_email" placeholder="New admin email address (e.g. partner@iss.com)" required style="flex:1; margin:0;">
+                <button type="submit" style="width:auto; margin:0;">Authorize Admin Email</button>
+            </form>
+            <ul>
+                {"".join([f'<li style="font-size:13px; margin:5px 0;">{em} ' + (f'<form method="POST" style="display:inline; margin-left:10px;"><input type="hidden" name="action" value="remove_admin_email"><input type="hidden" name="remove_email" value="{em}"><button type="submit" style="background:#ef4444; padding:2px 8px; font-size:11px;">Remove</button></form>' if em != OWNER_EMAIL and em != "admin@iss.com" else '<span style="color:#38bdf8; font-size:11px;">(Owner / Master)</span>') + '</li>' for em in admin_emails])}
+            </ul>
+        </div>
+
         <div class="box">
             <h3>💬 Support Ticket Control Center</h3>
             <a href="/admin/tickets" style="display:inline-block; background:#0284c7; color:white; padding:10px 18px; text-decoration:none; border-radius:6px; font-weight:bold; font-size:13px;">Open All Client Support Tickets (Messenger)</a>
         </div>
 
         <div class="box">
-            <h3>🔑 License Management (Issue & Delete/Block)</h3>
-            <form method="POST" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px; margin-bottom:15px;">
+            <h3>🔑 License Management (Create with Plan Tier & Expiry)</h3>
+            <form method="POST" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:15px;">
                 <input type="hidden" name="action" value="add_license">
-                <input type="text" name="l_key" placeholder="License Key (e.g. iss-123)" required>
+                <input type="text" name="l_key" placeholder="License Key (e.g. iss-999)" required>
                 <input type="text" name="l_name" placeholder="Client Name" required>
                 <input type="text" name="l_org" placeholder="Organization" required>
-                <input type="text" name="l_user" placeholder="Client User (def: admin)" value="admin" required>
-                <input type="text" name="l_pwd" placeholder="Client Pass (def: admin)" value="admin" required>
+                <select name="l_plan">
+                    <option value="Enterprise">Enterprise Plan</option>
+                    <option value="Professional">Professional Plan</option>
+                    <option value="Standard">Standard Plan</option>
+                </select>
+                <input type="text" name="l_expiry" placeholder="Expiry (YYYY-MM-DD)" value="2027-01-01" required>
+                <input type="text" name="l_user" placeholder="Client User" value="admin" required>
+                <input type="text" name="l_pwd" placeholder="Client Pass" value="admin" required>
                 <button type="submit" style="grid-column: 1 / -1;">Create License</button>
             </form>
             <table>
-                <tr><th>Key</th><th>Client</th><th>Org</th><th>Client Login Credentials</th><th>Expiry</th><th>Action</th></tr>
-                {"".join([f'<tr><td><code>{k}</code></td><td>{v["name"]}</td><td>{v["org"]}</td><td><code>{v.get("client_user","admin")} / {v.get("client_pwd","admin")}</code></td><td>{v["expiry"]}</td><td><form method="POST" style="margin:0;"><input type="hidden" name="action" value="delete_license"><input type="hidden" name="lic_key" value="{k}"><button type="submit" style="background:#ef4444; padding:4px 8px; font-size:11px;">Delete / Block</button></form></td></tr>' for k, v in licenses.items()]) if licenses else '<tr><td colspan="6" style="text-align:center; color:#94a3b8;">No licenses found.</td></tr>'}
+                <tr><th>Key</th><th>Client</th><th>Org</th><th>Plan Tier</th><th>Expiry</th><th>Client Credentials</th><th>Action</th></tr>
+                {"".join([f'<tr><td><code>{k}</code></td><td>{v["name"]}</td><td>{v["org"]}</td><td><b>{v["plan"]}</b></td><td>{v["expiry"]}</td><td><code>{v.get("client_user","admin")} / {v.get("client_pwd","admin")}</code></td><td><form method="POST" style="margin:0;"><input type="hidden" name="action" value="delete_license"><input type="hidden" name="lic_key" value="{k}"><button type="submit" style="background:#ef4444; padding:4px 8px; font-size:11px;">Delete / Block</button></form></td></tr>' for k, v in licenses.items()]) if licenses else '<tr><td colspan="7" style="text-align:center; color:#94a3b8;">No licenses found.</td></tr>'}
             </table>
         </div>
 
