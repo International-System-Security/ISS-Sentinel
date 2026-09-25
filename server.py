@@ -7,7 +7,7 @@ app.secret_key = "iss_super_secure_client_session_key"
 
 LICENSE_FILE = "licenses.txt"
 
-# ডিফল্ট অ্যাডমিন পাসওয়ার্ড (এটি আপনি পরে পরিবর্তন করতে পারবেন)
+# Default Admin Credentials
 ADMIN_CONFIG = {"username": "admin", "password": "admin"}
 
 KNOWN_THREATS = [
@@ -15,61 +15,52 @@ KNOWN_THREATS = [
     "44d88612fea8a8f36de82e1278abb02f",
 ]
 
-
 def load_licenses():
-  licenses_dict = {}
-  if os.path.exists(LICENSE_FILE):
-    with open(LICENSE_FILE, "r") as f:
-      for line in f:
-        parts = line.strip().split(",")
-        if len(parts) >= 6:
-          key = parts[0].strip()
-          licenses_dict[key] = {
-              "name": parts[1].strip(),
-              "org": parts[2].strip(),
-              "expiry": parts[3].strip(),
-              "max_devices": int(parts[4].strip()),
-              "plan_type": parts[5].strip(),
-              "pcs": [p.strip() for p in parts[6:] if p.strip()],
-          }
-  return licenses_dict
-
+    licenses_dict = {}
+    if os.path.exists(LICENSE_FILE):
+        with open(LICENSE_FILE, "r") as f:
+            for line in f:
+                parts = line.strip().split(",")
+                if len(parts) >= 6:
+                    key = parts[0].strip()
+                    licenses_dict[key] = {
+                        "name": parts[1].strip(),
+                        "org": parts[2].strip(),
+                        "expiry": parts[3].strip(),
+                        "max_devices": int(parts[4].strip()),
+                        "plan_type": parts[5].strip(),
+                        "pcs": [p.strip() for p in parts[6:] if p.strip()]
+                    }
+    return licenses_dict
 
 def save_all_licenses(licenses_dict):
-  with open(LICENSE_FILE, "w") as f:
-    for k, v in licenses_dict.items():
-      pcs_str = ",".join(v["pcs"])
-      f.write(
-          f"{k},{v['name']},{v['org']},{v['expiry']},{v['max_devices']},{v['plan_type']},{pcs_str}\n"
-      )
-
+    with open(LICENSE_FILE, "w") as f:
+        for k, v in licenses_dict.items():
+            pcs_str = ",".join(v["pcs"])
+            f.write(f"{k},{v['name']},{v['org']},{v['expiry']},{v['max_devices']},{v['plan_type']},{pcs_str}\n")
 
 @app.route("/", methods=["GET"])
 def home():
-  return """
+    return """
     <h2>ISS Cloud Security Enterprise Backend is Active!</h2>
     <p>Client Portal: <a href='/client-login'>/client-login</a></p>
     <p>Admin Login: <a href='/admin/login'>/admin/login</a></p>
     """
 
-
-# --- ১. অ্যাডমিন লগইন রাউট ---
+# --- 1. Admin Login Route ---
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
-  error_msg = ""
-  if request.method == "POST":
-    user = request.form.get("username")
-    pwd = request.form.get("password")
-    if (
-        user == ADMIN_CONFIG["username"]
-        and pwd == ADMIN_CONFIG["password"]
-    ):
-      session["is_admin"] = True
-      return redirect(url_for("admin_panel"))
-    else:
-      error_msg = "ভুল ইউজারনেম বা পাসওয়ার্ড!"
+    error_msg = ""
+    if request.method == "POST":
+        user = request.form.get("username")
+        pwd = request.form.get("password")
+        if user == ADMIN_CONFIG["username"] and pwd == ADMIN_CONFIG["password"]:
+            session['is_admin'] = True
+            return redirect(url_for('admin_panel'))
+        else:
+            error_msg = "Invalid Username or Password!"
 
-  return render_template_string(f"""
+    return render_template_string(f"""
     <!DOCTYPE html>
     <html>
     <head>
@@ -99,39 +90,33 @@ def admin_login():
     </html>
     """)
 
-
 @app.route("/admin/logout")
 def admin_logout():
-  session.pop("is_admin", None)
-  return redirect(url_for("admin_login"))
+    session.pop('is_admin', None)
+    return redirect(url_for('admin_login'))
 
-
-# --- ২. অ্যাডমিন ড্যাশবোর্ড (পাসওয়ার্ড চেঞ্জ অপশনসহ) ---
+# --- 2. Admin Dashboard (With credential change option) ---
 @app.route("/admin", methods=["GET", "POST"])
 def admin_panel():
-  if not session.get("is_admin"):
-    return redirect(url_for("admin_login"))
+    if not session.get('is_admin'):
+        return redirect(url_for('admin_login'))
 
-  success_msg = ""
-  if request.method == "POST":
-    action = request.form.get("action")
+    success_msg = ""
+    if request.method == "POST":
+        action = request.form.get("action")
+        if action == "change_credentials":
+            new_user = request.form.get("new_username")
+            new_pwd = request.form.get("new_password")
+            if new_user and new_pwd:
+                ADMIN_CONFIG["username"] = new_user
+                ADMIN_CONFIG["password"] = new_pwd
+                success_msg = "✅ Admin credentials updated successfully!"
 
-    # পাসওয়ার্ড বা ইউজারনেম পরিবর্তনের লজিক
-    if action == "change_credentials":
-      new_user = request.form.get("new_username")
-      new_pwd = request.form.get("new_password")
-      if new_user and new_pwd:
-        ADMIN_CONFIG["username"] = new_user
-        ADMIN_CONFIG["password"] = new_pwd
-        success_msg = "✅ Admin credentials updated successfully!"
-
-  licenses = load_licenses()
-  table_rows = ""
-  for k, v in licenses.items():
-    connected_list = (
-        ", ".join(v["pcs"]) if v["pcs"] else "No devices connected yet"
-    )
-    table_rows += f"""
+    licenses = load_licenses()
+    table_rows = ""
+    for k, v in licenses.items():
+        connected_list = ", ".join(v['pcs']) if v['pcs'] else "No devices connected yet"
+        table_rows += f"""
         <tr>
             <td><b>{k}</b></td>
             <td>{v['name']}</td>
@@ -143,9 +128,9 @@ def admin_panel():
         </tr>
         """
 
-  default_expiry = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+    default_expiry = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
 
-  html_page = f"""
+    html_page = f"""
     <!DOCTYPE html>
     <html>
     <head>
@@ -239,82 +224,76 @@ def admin_panel():
     </body>
     </html>
     """
-  return render_template_string(html_page)
-
+    return render_template_string(html_page)
 
 @app.route("/add-client", methods=["POST"])
 def add_client():
-  if not session.get("is_admin"):
-    return redirect(url_for("admin_login"))
+    if not session.get('is_admin'):
+        return redirect(url_for('admin_login'))
 
-  client_name = request.form.get("name")
-  org_name = request.form.get("org")
-  license_key = request.form.get("license")
-  plan_choice = request.form.get("plan_choice")
-  custom_expiry = request.form.get("custom_expiry")
-  custom_plan_type = request.form.get("custom_plan_type")
+    client_name = request.form.get("name")
+    org_name = request.form.get("org")
+    license_key = request.form.get("license")
+    plan_choice = request.form.get("plan_choice")
+    custom_expiry = request.form.get("custom_expiry")
+    custom_plan_type = request.form.get("custom_plan_type")
 
-  max_devices = 3
-  final_plan_type = plan_choice
+    max_devices = 3
+    final_plan_type = plan_choice
 
-  if plan_choice == "Custom-Duration":
-    expiry_date = (
-        custom_expiry
-        if custom_expiry
-        else (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
-    )
-    final_plan_type = custom_plan_type
-    if "Basic" in custom_plan_type:
-      max_devices = 1
-    elif "Enterprise" in custom_plan_type:
-      max_devices = 5
+    if plan_choice == "Custom-Duration":
+        expiry_date = custom_expiry if custom_expiry else (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+        final_plan_type = custom_plan_type
+        if "Basic" in custom_plan_type:
+            max_devices = 1
+        elif "Enterprise" in custom_plan_type:
+            max_devices = 5
+        else:
+            max_devices = 3
     else:
-      max_devices = 3
-  else:
-    if "1Year" in plan_choice:
-      expiry_date = (datetime.now() + timedelta(days=365)).strftime("%Y-%m-%d")
-    else:
-      expiry_date = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+        if "1Year" in plan_choice:
+            expiry_date = (datetime.now() + timedelta(days=365)).strftime("%Y-%m-%d")
+        else:
+            expiry_date = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
 
-    if "Basic" in plan_choice:
-      max_devices = 1
-    elif "Enterprise" in plan_choice:
-      max_devices = 5
+        if "Basic" in plan_choice:
+            max_devices = 1
+        elif "Enterprise" in plan_choice:
+            max_devices = 5
 
-  licenses = load_licenses()
-  licenses[license_key] = {
-      "name": client_name,
-      "org": org_name,
-      "expiry": expiry_date,
-      "max_devices": max_devices,
-      "plan_type": final_plan_type,
-      "pcs": [],
-  }
-  save_all_licenses(licenses)
+    licenses = load_licenses()
+    licenses[license_key] = {
+        "name": client_name,
+        "org": org_name,
+        "expiry": expiry_date,
+        "max_devices": max_devices,
+        "plan_type": final_plan_type,
+        "pcs": []
+    }
+    save_all_licenses(licenses)
 
-  return f"""
+    return f"""
     <body style="font-family: Arial; padding: 30px; text-align: center;">
         <h3>Success! License ID <b>{license_key}</b> created with expiry date: {expiry_date} ({final_plan_type})</h3>
         <a href="/admin" style="background: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 15px;">Back to Dashboard</a>
     </body>
     """
 
-
-# --- ৩. ক্লায়েন্ট পোর্টাল লগইন ---
+# --- 3. Client Portal Login ---
 @app.route("/client-login", methods=["GET", "POST"])
 def client_login():
-  error_msg = ""
-  if request.method == "POST":
-    license_key = request.form.get("license_key", "").strip()
-    licenses = load_licenses()
+    error_msg = ""
+    if request.method == "POST":
+        license_key = request.form.get("license_key", "").strip()
+        licenses = load_licenses()
 
-    if license_key in licenses:
-      session["active_license"] = license_key
-      return redirect(url_for("client_dashboard"))
-    else:
-      error_msg = "Invalid License ID! Please enter a valid ID."
+        if license_key in licenses:
+            session['active_license'] = license_key
+            return redirect(url_for('client_dashboard'))
+        else:
+            error_msg = "Invalid License ID! Please enter a valid ID."
 
-  return render_template_string(f"""
+    return render_template_string(f"""
     <!DOCTYPE html>
     <html>
     <head>
@@ -341,38 +320,34 @@ def client_login():
     </html>
     """)
 
-
-# --- ৪. ক্লায়েন্ট ড্যাশবোর্ড ---
+# --- 4. Client Dashboard ---
 @app.route("/client-dashboard", methods=["GET", "POST"])
 def client_dashboard():
-  license_key = session.get("active_license")
-  licenses = load_licenses()
+    license_key = session.get('active_license')
+    licenses = load_licenses()
 
-  if not license_key or license_key not in licenses:
-    return redirect(url_for("client_login"))
+    if not license_key or license_key not in licenses:
+        return redirect(url_for('client_login'))
 
-  v = licenses[license_key]
-  client_ip = request.remote_addr
-  setup_message = ""
+    v = licenses[license_key]
+    client_ip = request.remote_addr
+    setup_message = ""
 
-  if request.method == "POST":
-    if client_ip not in v["pcs"]:
-      if len(v["pcs"]) >= v["max_devices"]:
-        setup_message = "❌ Device limit reached! Cannot setup more devices."
-      else:
-        v["pcs"].append(client_ip)
-        save_all_licenses(licenses)
-        setup_message = (
-            "✅ Setup Successful! Your device is now linked and fully"
-            " protected."
-        )
-    else:
-      setup_message = "ℹ️ This device is already set up and linked!"
+    if request.method == "POST":
+        if client_ip not in v['pcs']:
+            if len(v['pcs']) >= v['max_devices']:
+                setup_message = "❌ Device limit reached! Cannot setup more devices."
+            else:
+                v['pcs'].append(client_ip)
+                save_all_licenses(licenses)
+                setup_message = "✅ Setup Successful! Your device is now linked and fully protected."
+        else:
+            setup_message = "ℹ️ This device is already set up and linked!"
 
-  connected_devices = ", ".join(v["pcs"]) if v["pcs"] else "Not setup yet"
-  is_setup_done = client_ip in v["pcs"]
+    connected_devices = ", ".join(v['pcs']) if v['pcs'] else "Not setup yet"
+    is_setup_done = client_ip in v['pcs']
 
-  return render_template_string(f"""
+    return render_template_string(f"""
     <!DOCTYPE html>
     <html>
     <head>
@@ -420,7 +395,7 @@ def client_dashboard():
 
             {'<div style="background: #f0fdf4; padding: 15px; border-radius: 6px; border: 1px solid #bbf7d0; margin-top: 15px; font-size: 14px;"><b>Great!</b> Your device is already set up and linked with this license.</div>' if is_setup_done else '''
             <form method="POST">
-                <p style="font-size: 14px; color: #475569;">আপনার ডিভাইস কনফিগার করতে নিচের বাটনে ক্লিক করুন। মাত্র ৩০ সেকেন্ডের মধ্যে সব সেটআপ হয়ে যাবে!</p>
+                <p style="font-size: 14px; color: #475569;">Click the button below to configure your device. Setup will be completed instantly!</p>
                 <button type="submit" class="setup-btn">🚀 Click Here to Setup Now (Instant)</button>
             </form>
             '''}
@@ -431,42 +406,32 @@ def client_dashboard():
     </html>
     """)
 
-
 @app.route("/scan", methods=["POST"])
 def scan_file():
-  data = request.json or {}
-  license_key = data.get("license_key")
-  file_hash = data.get("hash")
-  filename = data.get("filename", "Unknown")
-  client_pc_id = data.get("pc_id", request.remote_addr)
+    data = request.json or {}
+    license_key = data.get("license_key")
+    file_hash = data.get("hash")
+    filename = data.get("filename", "Unknown")
+    client_pc_id = data.get("pc_id", request.remote_addr)
 
-  licenses = load_licenses()
-  if license_key not in licenses:
-    return jsonify({"status": "error", "message": "Invalid License ID!"}), 403
+    licenses = load_licenses()
+    if license_key not in licenses:
+        return jsonify({"status": "error", "message": "Invalid License ID!"}), 403
 
-  client_info = licenses[license_key]
-  if datetime.now().date() > datetime.strptime(
-      client_info["expiry"], "%Y-%m-%d"
-  ).date():
-    return jsonify({"status": "expired", "message": "Subscription Expired!"}), 403
+    client_info = licenses[license_key]
+    if datetime.now().date() > datetime.strptime(client_info["expiry"], "%Y-%m-%d").date():
+        return jsonify({"status": "expired", "message": "Subscription Expired!"}), 403
 
-  if client_pc_id not in client_info["pcs"]:
-    if len(client_info["pcs"]) >= client_info["max_devices"]:
-      return jsonify({"status": "error", "message": "Device Limit Reached!"}), 403
-    client_info["pcs"].append(client_pc_id)
-    save_all_licenses(licenses)
+    if client_pc_id not in client_info["pcs"]:
+        if len(client_info["pcs"]) >= client_info["max_devices"]:
+            return jsonify({"status": "error", "message": "Device Limit Reached!"}), 403
+        client_info["pcs"].append(client_pc_id)
+        save_all_licenses(licenses)
 
-  if file_hash in KNOWN_THREATS:
-    return jsonify({
-        "status": "danger",
-        "is_threat": True,
-        "message": "Threat found in " + filename,
-    })
+    if file_hash in KNOWN_THREATS:
+        return jsonify({"status": "danger", "is_threat": True, "message": "Threat found in " + filename})
 
-  return jsonify(
-      {"status": "clean", "is_threat": False, "message": filename + " is safe."}
-  )
-
+    return jsonify({"status": "clean", "is_threat": False, "message": filename + " is safe."})
 
 if __name__ == "__main__":
-  app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000)
