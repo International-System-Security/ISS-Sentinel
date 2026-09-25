@@ -1,9 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 from flask import Flask, redirect, render_template_string, request, session, url_for
 
 app = Flask(__name__)
-app.secret_key = "iss_enterprise_security_secret_key_v5"
+app.secret_key = "iss_enterprise_security_secret_key_v7"
 
 USER_FILE = "users.txt"
 POST_FILE = "posts.txt"
@@ -13,11 +13,19 @@ LICENSE_FILE = "licenses.txt"
 
 MASTER_ADMIN_DOMAIN = "iss.com"
 
-# Exact Verified Badge SVG matching the provided image style[span_2](start_span)[span_2](end_span)[span_3](start_span)[span_3](end_span)
-VERIFIED_BADGE_SVG = '''
-<svg width="16" height="16" viewBox="0 0 24 24" fill="#0ea5e9" style="vertical-align: middle; margin-left: 4px;" title="Verified Account">
+# Exact Verified Blue Badge SVG for Admins
+ADMIN_BADGE_SVG = '''
+<svg width="16" height="16" viewBox="0 0 24 24" fill="#0ea5e9" style="vertical-align: middle; margin-left: 4px;" title="Verified Admin">
     <path d="M12 2L14.34 3.73L17.25 3.5L18.77 6.04L21.5 7.15L21.57 10.12L23.75 12.12L22.12 14.75L22.5 17.75L19.75 19L18.38 21.62L15.5 21.37L13.38 23.25L10.62 22.25L8.12 23.37L6.38 21.12L3.62 20.37L3.12 17.5L0.87 15.62L2.12 12.87L0.87 10.12L3.12 8.25L3.87 5.5L6.62 5.12L8.5 2.87L11.25 3.87L12 2Z" fill="#0ea5e9"/>
     <path d="M9 16.2L4.8 12L6.2 10.6L9 13.4L17.8 4.6L19.2 6L9 16.2Z" fill="white"/>
+</svg>
+'''
+
+# Trusted Black Badge SVG for Trusted Members selected by Admin
+TRUSTED_BLACK_BADGE_SVG = '''
+<svg width="16" height="16" viewBox="0 0 24 24" fill="#000000" style="vertical-align: middle; margin-left: 4px;" title="Trusted Member">
+    <path d="M12 2L14.34 3.73L17.25 3.5L18.77 6.04L21.5 7.15L21.57 10.12L23.75 12.12L22.12 14.75L22.5 17.75L19.75 19L18.38 21.62L15.5 21.37L13.38 23.25L10.62 22.25L8.12 23.37L6.38 21.12L3.62 20.37L3.12 17.5L0.87 15.62L2.12 12.87L0.87 10.12L3.12 8.25L3.87 5.5L6.62 5.12L8.5 2.87L11.25 3.87L12 2Z" fill="#1e293b" stroke="#38bdf8" stroke-width="1"/>
+    <path d="M9 16.2L4.8 12L6.2 10.6L9 13.4L17.8 4.6L19.2 6L9 16.2Z" fill="#38bdf8"/>
 </svg>
 '''
 
@@ -27,24 +35,60 @@ def load_users():
         with open(USER_FILE, "r") as f:
             for line in f:
                 parts = line.strip().split("|||")
-                if len(parts) >= 6:
+                if len(parts) >= 8:
                     uname = parts[0].strip()
                     users[uname] = {
                         "email": parts[1].strip(),
                         "password": parts[2].strip(),
                         "role": parts[3].strip(),
                         "pic": parts[4].strip(),
-                        "verified": parts[5].strip() == "True"
+                        "verified": parts[5].strip() == "True",
+                        "trusted": parts[6].strip() == "True",
+                        "last_active": parts[7].strip()
                     }
-    # Default Admin with admin/admin credentials
+                elif len(parts) >= 6:
+                    uname = parts[0].strip()
+                    users[uname] = {
+                        "email": parts[1].strip(),
+                        "password": parts[2].strip(),
+                        "role": parts[3].strip(),
+                        "pic": parts[4].strip(),
+                        "verified": parts[5].strip() == "True",
+                        "trusted": False,
+                        "last_active": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    }
     if "admin" not in users:
-        users["admin"] = {"email": f"admin@{MASTER_ADMIN_DOMAIN}", "password": "admin", "role": "Admin", "pic": "https://i.imgur.com/6VBx3io.png", "verified": True}
+        users["admin"] = {
+            "email": f"admin@{MASTER_ADMIN_DOMAIN}", "password": "admin", "role": "Admin",
+            "pic": "https://i.imgur.com/6VBx3io.png", "verified": True, "trusted": False,
+            "last_active": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
     return users
 
 def save_all_users(users_dict):
     with open(USER_FILE, "w") as f:
         for uname, data in users_dict.items():
-            f.write(f"{uname}|||{data['email']}|||{data['password']}|||{data['role']}|||{data['pic']}|||{data['verified']}\n")
+            f.write(f"{uname}|||{data['email']}|||{data['password']}|||{data['role']}|||{data['pic']}|||{data['verified']}|||{data['trusted']}|||{data.get('last_active', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))}\n")
+
+def check_inactivity_logout():
+    current_user = session.get("username")
+    if current_user:
+        users = load_users()
+        if current_user in users:
+            last_active_str = users[current_user].get("last_active")
+            if last_active_str:
+                try:
+                    last_active_time = datetime.strptime(last_active_str, "%Y-%m-%d %H:%M:%S")
+                    # If inactive for more than 30 days (1 month), logout session
+                    if datetime.now() - last_active_time > timedelta(days=30):
+                        session.pop("username", None)
+                        return True
+                except:
+                    pass
+            # Update last active timestamp
+            users[current_user]["last_active"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            save_all_users(users)
+    return False
 
 def load_posts():
     posts = []
@@ -99,7 +143,6 @@ def load_licenses():
         with open(LICENSE_FILE, "r") as f:
             for line in f:
                 parts = line.strip().split(",")
-                # Format: Key, Name, Org, Expiry, Max, Plan, ClientUser, ClientPwd
                 if len(parts) >= 8:
                     licenses[parts[0].strip()] = {
                         "name": parts[1].strip(), "org": parts[2].strip(), "expiry": parts[3].strip(),
@@ -118,6 +161,10 @@ def save_licenses(lic_dict):
     with open(LICENSE_FILE, "w") as f:
         for k, v in lic_dict.items():
             f.write(f"{k},{v['name']},{v['org']},{v['expiry']},{v['max']},{v['plan']},{v['client_user']},{v['client_pwd']}\n")
+
+@app.before_request
+def before_request_func():
+    check_inactivity_logout()
 
 # --- 1. HOME PANEL & ISS SOCIAL & CONTACT US ---
 @app.route("/", methods=["GET", "POST"])
@@ -184,7 +231,7 @@ def home():
                 <a href="#contact">Contact Us</a>
                 <a href="#tickets">Support Tickets</a>
                 <a href="/my-profile">My Profile</a>
-                <a href="/admin" style="color: #38bdf8; font-weight:bold;">Admin Portal</a>
+                {'<a href="/admin" style="color: #38bdf8; font-weight:bold;">Admin Panel</a>' if user_data and user_data['role'] == 'Admin' else ''}
                 <a href="/client-login">Client Portal</a>
             </div>
         </nav>
@@ -193,7 +240,7 @@ def home():
             <div class="card" style="text-align: center; padding: 50px 20px;">
                 <h1>Next-Gen Cloud Security & Social Hub</h1>
                 <p style="color: var(--text-muted); max-width: 650px; margin: 0 auto 20px auto;">Connect with professionals, manage security licenses, and communicate securely through private tickets.</p>
-                {'<p style="color: #34d399; font-weight: bold;">Welcome back, ' + current_user + (VERIFIED_BADGE_SVG if user_data['verified'] else '') + '</p>' if current_user else '<a href="/my-profile" style="background:var(--accent-blue); color:white; padding:10px 20px; border-radius:6px; text-decoration:none; font-weight:bold;">Login / Register Now</a>'}
+                {'<p style="color: #34d399; font-weight: bold;">Welcome back, ' + current_user + (ADMIN_BADGE_SVG if user_data['role'] == 'Admin' else (TRUSTED_BLACK_BADGE_SVG if user_data.get('trusted') else '')) + '</p>' if current_user else '<a href="/my-profile" style="background:var(--accent-blue); color:white; padding:10px 20px; border-radius:6px; text-decoration:none; font-weight:bold;">Login / Register (Social Join)</a>'}
             </div>
 
             <!-- ISS Social Feed -->
@@ -215,13 +262,13 @@ def home():
                         <button type="submit">Post to ISS Social</button>
                     </form>
                 </div>
-                ''' if current_user else '<p style="font-size:13px; color:#94a3b8;">Please <a href="/my-profile" style="color:#0ea5e9;">login</a> to create posts.</p>'}
+                ''' if current_user else '<p style="font-size:13px; color:#94a3b8;">Please <a href="/my-profile" style="color:#0ea5e9;">login</a> to join social and create posts.</p>'}
 
                 <div>
                     {"".join([f'''
                     <div style="background:var(--bg-secondary); padding:15px; border-radius:8px; margin-bottom:15px; border:1px solid var(--border-color);">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                            <b>{p['author']}</b> {VERIFIED_BADGE_SVG if users.get(p['author'], {}).get('verified') else ''}
+                            <b>{p['author']}</b> {ADMIN_BADGE_SVG if users.get(p['author'], {}).get('role') == 'Admin' else (TRUSTED_BLACK_BADGE_SVG if users.get(p['author'], {}).get('trusted') else '')}
                             <span style="font-size:11px; color:var(--text-muted);">{p['date']}</span>
                         </div>
                         <p style="margin:0 0 10px 0; font-size:14px;">{p['content']}</p>
@@ -236,7 +283,7 @@ def home():
                     <div style="background:var(--bg-secondary); padding:10px; border-radius:6px; display:flex; align-items:center; gap:10px;">
                         <img src="{d['pic']}" class="avatar" style="width:35px; height:35px;" />
                         <div>
-                            <div style="font-size:13px; font-weight:bold;"><a href="/my-profile?user={u}" style="color:white; text-decoration:none;">{u}</a> {VERIFIED_BADGE_SVG if d['verified'] else ''}</div>
+                            <div style="font-size:13px; font-weight:bold;"><a href="/my-profile?user={u}" style="color:white; text-decoration:none;">{u}</a> {ADMIN_BADGE_SVG if d['role'] == 'Admin' else (TRUSTED_BLACK_BADGE_SVG if d.get('trusted') else '')}</div>
                             <div style="font-size:11px; color:var(--text-muted);">{d['role']}</div>
                         </div>
                     </div>
@@ -244,7 +291,7 @@ def home():
                 </div>
             </div>
 
-            <!-- Contact Us & Ticket Section -->
+            <!-- Contact Us & Tickets -->
             <div class="card" id="contact">
                 <h3>📞 Contact Us & Service Application</h3>
                 <p style="font-size: 13px; color: var(--text-muted);">Apply to get our enterprise security features and license solutions.</p>
@@ -268,7 +315,7 @@ def home():
     </html>
     """)
 
-# --- MY PROFILE (Login / Register with "Who are you?" Role Choice) ---
+# --- MY PROFILE (Login / Register with Select Role & Add to Trusted Button for Admins) ---
 @app.route("/my-profile", methods=["GET", "POST"])
 def my_profile():
     users = load_users()
@@ -281,25 +328,45 @@ def my_profile():
             uname = request.form.get("username").strip()
             email = request.form.get("email").strip()
             pwd = request.form.get("password").strip()
-            who_are_you = request.form.get("who_are_you") # "User" or "Admin"
+            selected_role = request.form.get("role_selection") # "Member" or "Administrator"
             pic = request.form.get("pic").strip() or "https://i.imgur.com/6VBx3io.png"
 
             if uname in users:
                 error = "Username already exists!"
             else:
-                role = "Admin" if who_are_you == "Admin" or MASTER_ADMIN_DOMAIN in email else "User"
-                is_verified = True if role == "Admin" else False
-                users[uname] = {"email": email, "password": pwd, "role": role, "pic": pic, "verified": is_verified}
-                save_all_users(users)
-                session["username"] = uname
-                return redirect(url_for("my_profile"))
+                role = "User"
+                if selected_role == "Administrator":
+                    if MASTER_ADMIN_DOMAIN in email or uname == "admin":
+                        role = "Admin"
+                    else:
+                        error = "Unauthorized for Administrator role! Email must belong to iss.com domain."
+                
+                if not error:
+                    users[uname] = {
+                        "email": email, "password": pwd, "role": role, "pic": pic,
+                        "verified": role == "Admin", "trusted": False,
+                        "last_active": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    }
+                    save_all_users(users)
+                    session["username"] = uname
+                    return redirect(url_for("my_profile"))
 
         elif action == "login":
             uname = request.form.get("username").strip()
             pwd = request.form.get("password").strip()
+            selected_role = request.form.get("role_selection")
+
             if uname in users and users[uname]["password"] == pwd:
-                session["username"] = uname
-                return redirect(url_for("my_profile"))
+                user_role = users[uname]["role"]
+                if selected_role == "Administrator" and user_role != "Admin":
+                    error = "This account does not have Administrator privileges!"
+                else:
+                    session["username"] = uname
+                    users[uname]["last_active"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    save_all_users(users)
+                    if user_role == "Admin":
+                        return redirect(url_for("admin_panel"))
+                    return redirect(url_for("my_profile"))
             else:
                 error = "Invalid username or password!"
 
@@ -310,20 +377,22 @@ def my_profile():
                 save_all_users(users)
                 msg = "✅ Profile picture updated successfully!"
 
-        elif action == "toggle_verify" and "username" in session:
+        elif action == "toggle_trusted" and "username" in session:
             current_user = session["username"]
             if users.get(current_user, {}).get("role") == "Admin":
                 target_user = request.form.get("target_user")
                 if target_user in users:
-                    users[target_user]["verified"] = not users[target_user]["verified"]
+                    users[target_user]["trusted"] = not users[target_user].get("trusted", False)
                     save_all_users(users)
-                    msg = f"✅ Verified badge status toggled for '{target_user}'!"
+                    msg = f"✅ Trusted Black Badge status updated for '{target_user}'!"
 
     current_user = session.get("username")
     user_data = users.get(current_user) if current_user else None
     
     view_user_name = request.args.get("user", current_user)
     view_data = users.get(view_user_name)
+
+    is_viewer_admin = user_data and user_data['role'] == 'Admin'
 
     return render_template_string(f"""
     <!DOCTYPE html>
@@ -356,7 +425,7 @@ def my_profile():
             {f'''
             <div style="text-align:center;">
                 <img src="{view_data['pic']}" class="avatar-lg" />
-                <h2 style="margin:15px 0 5px 0;">{view_user_name} {VERIFIED_BADGE_SVG if view_data['verified'] else ''}</h2>
+                <h2 style="margin:15px 0 5px 0;">{view_user_name} {ADMIN_BADGE_SVG if view_data['role'] == 'Admin' else (TRUSTED_BLACK_BADGE_SVG if view_data.get('trusted') else '')}</h2>
                 <p style="color:var(--text-muted); font-size:14px; margin:0 0 20px 0;">Email: {view_data['email']} | Role: <b>{view_data['role']}</b></p>
             </div>
 
@@ -371,22 +440,24 @@ def my_profile():
             </div>
             ''' if view_user_name == current_user else ''}
 
+            <!-- Admin "Add to Trusted" Button to assign Black Badge -->
             {f'''
             <div style="background:var(--bg-secondary); padding:20px; border-radius:8px; margin-top:20px; border: 1px dashed var(--accent-blue);">
                 <h4 style="color:var(--accent-blue); margin-top:0;">Admin Trust Control</h4>
-                <p style="font-size:12px; color:var(--text-muted);">As an admin, you can grant or revoke the verified badge for this account.</p>
+                <p style="font-size:12px; color:var(--text-muted);">As an admin, you can assign or remove the Trusted Black Badge for this profile.</p>
                 <form method="POST">
-                    <input type="hidden" name="action" value="toggle_verify">
+                    <input type="hidden" name="action" value="toggle_trusted">
                     <input type="hidden" name="target_user" value="{view_user_name}">
-                    <button type="submit" style="background:{'#ef4444' if view_data['verified'] else '#10b981'};">
-                        {'Revoke Verified Badge' if view_data['verified'] else 'Grant Trusted Badge (🔵)'}
+                    <button type="submit" style="background:{'#ef4444' if view_data.get('trusted') else '#10b981'};">
+                        {'Remove Trusted Black Badge' if view_data.get('trusted') else 'Add to Trusted (Black Badge)'}
                     </button>
                 </form>
             </div>
-            ''' if user_data and user_data['role'] == 'Admin' else ''}
+            ''' if is_viewer_admin and view_data['role'] != 'Admin' else ''}
 
             <div style="text-align:center; margin-top:25px;">
                 <a href="/logout" style="color:#ef4444; font-weight:bold; font-size:14px; text-decoration:none;">Log Out Account</a>
+                {f'<br><br><a href="/admin" style="color:#38bdf8; font-weight:bold; text-decoration:none;">Go to Admin Panel &rarr;</a>' if user_data['role'] == 'Admin' else ''}
             </div>
             ''' if current_user else '''
             <div style="display:flex; justify-content:center; gap:10px; margin-bottom:20px;">
@@ -396,25 +467,30 @@ def my_profile():
 
             <div id="login-form">
                 <h3>Account Login</h3>
-                <p style="font-size:12px; color:var(--text-muted);">Default Admin Login: <b>admin / admin</b></p>
+                <p style="font-size:12px; color:var(--text-muted);">Default Admin: <b>admin / admin</b></p>
                 <form method="POST">
                     <input type="hidden" name="action" value="login">
+                    <label style="font-size:12px; color:var(--text-muted);">Select Role</label>
+                    <select name="role_selection">
+                        <option value="Member">Member</option>
+                        <option value="Administrator">Administrator</option>
+                    </select>
                     <label style="font-size:12px; color:var(--text-muted);">Username</label>
                     <input type="text" name="username" value="admin" required>
                     <label style="font-size:12px; color:var(--text-muted);">Password</label>
                     <input type="password" name="password" value="admin" required>
-                    <button type="submit">Login to Profile</button>
+                    <button type="submit">Login</button>
                 </form>
             </div>
 
             <div id="reg-form" style="display:none;">
-                <h3>Create New Account</h3>
+                <h3>Join ISS Social (Register)</h3>
                 <form method="POST">
                     <input type="hidden" name="action" value="register">
-                    <label style="font-size:12px; color:var(--text-muted);">Who are you?</label>
-                    <select name="who_are_you">
-                        <option value="User">User</option>
-                        <option value="Admin">Admin</option>
+                    <label style="font-size:12px; color:var(--text-muted);">Select Role</label>
+                    <select name="role_selection">
+                        <option value="Member">Member</option>
+                        <option value="Administrator">Administrator</option>
                     </select>
                     <label style="font-size:12px; color:var(--text-muted);">Username</label>
                     <input type="text" name="username" required>
@@ -495,7 +571,7 @@ def admin_panel():
     </head>
     <body>
         <div class="navbar">
-            <h2>🛡️ Admin Center ({current_user} {VERIFIED_BADGE_SVG})</h2>
+            <h2>🛡️ Admin Center ({current_user} {ADMIN_BADGE_SVG})</h2>
             <a href="/" style="color: #38bdf8; text-decoration: none; font-weight: bold;">&larr; Back to Home</a>
         </div>
 
@@ -587,7 +663,7 @@ def admin_tickets():
     </html>
     """)
 
-# --- 3. CLIENT PANEL (With License ID, Username & Password) ---
+# --- 3. CLIENT PANEL ---
 @app.route("/client-login", methods=["GET", "POST"])
 def client_login():
     error_msg = ""
@@ -615,7 +691,7 @@ def client_login():
     <body style="font-family:'Segoe UI'; background:#060913; color:white; display:flex; justify-content:center; align-items:center; height:100vh; margin:0;">
         <div style="background:#111827; padding:35px; border-radius:12px; width:360px; border:1px solid #1e293b;">
             <h2>Client Portal Login</h2>
-            <p style="font-size:13px; color:#94a3b8;">Enter License ID, Username & Password (Default: admin/admin).</p>
+            <p style="font-size:13px; color:#94a3b8;">Enter License ID, Username & Password.</p>
             {f'<div style="color:#fca5a5; font-size:13px; margin-bottom:10px;">{error_msg}</div>' if error_msg else ''}
             <form method="POST">
                 <label style="font-size:12px; color:#94a3b8;">License ID</label>
