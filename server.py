@@ -45,7 +45,7 @@ def home():
     <p>Admin Dashboard: <a href='/admin?key=my_super_secret_admin_key_123'>/admin</a></p>
     """
 
-# ১. অ্যাডমিন ড্যাশবোর্ড (Trial, Monthly, Custom Plans & Calendar Included)
+# ১. অ্যাডমিন ড্যাশবোর্ড (Calendar with helper plan hints included)
 @app.route("/admin", methods=["GET"])
 def admin_panel():
     key = request.args.get("key")
@@ -86,6 +86,7 @@ def admin_panel():
             table {{ width: 100%%; border-collapse: collapse; margin-top: 10px; min-width: 600px; }}
             th, td {{ border: 1px solid #e2e8f0; padding: 10px; text-align: left; font-size: 13px; }}
             th {{ background-color: #0f172a; color: white; }}
+            .hint-box {{ background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px 10px; border-radius: 4px; font-size: 12px; color: #475569; margin-bottom: 12px; }}
         </style>
     </head>
     <body>
@@ -102,32 +103,27 @@ def admin_panel():
                     <label>License ID:</label>
                     <input type="text" name="license" placeholder="e.g. iss-1111-2026" required>
                     
-                    <label>Select Plan Duration:</label>
+                    <label>Select Main Plan Duration:</label>
                     <select name="plan_choice">
-                        <optgroup label="Trial & Temporary Plans">
-                            <option value="Trial-1Day">Trial Plan (1 Day)</option>
-                            <option value="Trial-2Days">Trial Plan (2 Days)</option>
-                            <option value="Trial-7Days">Trial Plan (7 Days)</option>
-                        </optgroup>
-                        <optgroup label="Standard Duration Plans">
-                            <option value="Basic-Monthly">Basic Plan (1 Device - 1 Month)</option>
-                            <option value="Basic-2Months">Basic Plan (1 Device - 2 Months)</option>
-                            <option value="Basic-3Months">Basic Plan (1 Device - 3 Months)</option>
-                            <option value="Standard-Monthly">Standard Plan (3 Devices - 1 Month)</option>
-                            <option value="Standard-2Months">Standard Plan (3 Devices - 2 Months)</option>
-                            <option value="Standard-3Months">Standard Plan (3 Devices - 3 Months)</option>
-                            <option value="Enterprise-Monthly">Enterprise Plan (5 Devices - 1 Month)</option>
-                            <option value="Enterprise-2Months">Enterprise Plan (5 Devices - 2 Months)</option>
-                            <option value="Enterprise-3Months">Enterprise Plan (5 Devices - 3 Months)</option>
-                        </optgroup>
-                        <optgroup label="Custom Option">
-                            <option value="Custom-Duration">Custom Duration (Use Calendar Below)</option>
-                        </optgroup>
+                        <option value="Basic-Monthly">Basic Plan (1 Device - 1 Month)</option>
+                        <option value="Basic-2Months">Basic Plan (1 Device - 2 Months)</option>
+                        <option value="Basic-3Months">Basic Plan (1 Device - 3 Months)</option>
+                        <option value="Standard-Monthly">Standard Plan (3 Devices - 1 Month)</option>
+                        <option value="Standard-2Months">Standard Plan (3 Devices - 2 Months)</option>
+                        <option value="Standard-3Months">Standard Plan (3 Devices - 3 Months)</option>
+                        <option value="Enterprise-Monthly">Enterprise Plan (5 Devices - 1 Month)</option>
+                        <option value="Enterprise-2Months">Enterprise Plan (5 Devices - 2 Months)</option>
+                        <option value="Enterprise-3Months">Enterprise Plan (5 Devices - 3 Months)</option>
+                        <option value="Custom-Duration">Custom Duration (Use Calendar Below)</option>
                     </select>
 
                     <label>Custom Expiry Date (Calendar):</label>
                     <input type="date" name="custom_expiry" value="{default_expiry}">
-                    <small style="color: #64748b; display: block; margin-top: -8px; margin-bottom: 10px;">(যদি উপরে Custom সিলেক্ট করেন তবে এখান থেকে নির্দিষ্ট তারিখ দিন)</small>
+                    
+                    <div class="hint-box">
+                        <b>💡 ট্রায়াল বা শর্ট-টার্ম প্ল্যান গাইড:</b><br>
+                        ১ বা ২ দিনের ট্রায়াল দিতে চাইলে ক্যালেন্ডার থেকে নির্দিষ্ট তারিখ সিলেক্ট করুন অথবা উপরে Custom সিলেক্ট করে মেয়াদ দিন।
+                    </div>
 
                     <button type="submit">Create License ID</button>
                 </form>
@@ -170,24 +166,17 @@ def add_client():
         max_devices = 1
     elif "Enterprise" in plan_choice:
         max_devices = 5
-    elif "Trial" in plan_choice:
-        max_devices = 1  # ট্রায়াল প্ল্যানের জন্য ডিফল্ট ১টি ডিভাইস
 
-    # মেয়াদ হিসাব করার অটোমেটিক লজিক
+    # মেয়াদ হিসাব করার লজিক
     if plan_choice == "Custom-Duration" and custom_expiry:
         expiry_date = custom_expiry
-    elif plan_choice == "Trial-1Day":
-        expiry_date = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
-    elif plan_choice == "Trial-2Days":
-        expiry_date = (datetime.now() + timedelta(days=2)).strftime("%Y-%m-%d")
-    elif plan_choice == "Trial-7Days":
-        expiry_date = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
     elif "2Months" in plan_choice:
         expiry_date = (datetime.now() + timedelta(days=60)).strftime("%Y-%m-%d")
     elif "3Months" in plan_choice:
         expiry_date = (datetime.now() + timedelta(days=90)).strftime("%Y-%m-%d")
     else:
-        expiry_date = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+        # যদি ড্রপডাউন থেকে অন্য কিছু বা কাস্টম ডেট দেওয়া হয়
+        expiry_date = custom_expiry if custom_expiry else (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
 
     licenses = load_licenses()
     licenses[license_key] = {
