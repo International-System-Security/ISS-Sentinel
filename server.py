@@ -3,7 +3,7 @@ import os
 from flask import Flask, redirect, render_template_string, request, session, url_for
 
 app = Flask(__name__)
-app.secret_key = "iss_enterprise_security_secret_key_v12"
+app.secret_key = "iss_enterprise_security_secret_key_v14"
 
 USER_FILE = "users.txt"
 POST_FILE = "posts.txt"
@@ -12,7 +12,7 @@ TICKET_FILE = "tickets.txt"
 LICENSE_FILE = "licenses.txt"
 ADMIN_LIST_FILE = "admins.txt"
 
-OWNER_EMAIL = "iss@owner.com"
+OWNER_EMAIL = "ibrahim@iss.com"
 
 # Exact Verified Blue Badge SVG for Admins
 ADMIN_BADGE_SVG = '''
@@ -68,8 +68,7 @@ def load_users():
                 if len(parts) >= 8:
                     uname = parts[0].strip()
                     email = parts[1].strip()
-                    # Auto assign admin role if email is in admin list
-                    role = "Admin" if email in admin_emails else parts[3].strip()
+                    role = "Admin" if (email in admin_emails or email == OWNER_EMAIL) else parts[3].strip()
                     verified = True if role == "Admin" else parts[5].strip() == "True"
                     users[uname] = {
                         "email": email, "password": parts[2].strip(),
@@ -80,7 +79,7 @@ def load_users():
                 elif len(parts) >= 6:
                     uname = parts[0].strip()
                     email = parts[1].strip()
-                    role = "Admin" if email in admin_emails else parts[3].strip()
+                    role = "Admin" if (email in admin_emails or email == OWNER_EMAIL) else parts[3].strip()
                     verified = True if role == "Admin" else parts[5].strip() == "True"
                     users[uname] = {
                         "email": email, "password": parts[2].strip(),
@@ -88,8 +87,8 @@ def load_users():
                         "verified": verified, "trusted": False,
                         "last_active": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     }
-    if "admin" not in users:
-        users["admin"] = {
+    if "ibrahim" not in users:
+        users["ibrahim"] = {
             "email": OWNER_EMAIL, "password": "admin", "role": "Admin",
             "pic": "https://i.imgur.com/6VBx3io.png", "verified": True, "trusted": False,
             "last_active": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -224,6 +223,7 @@ def home():
 
     current_user = session.get("username")
     user_data = users.get(current_user) if current_user else None
+    is_admin = user_data and user_data['role'] == 'Admin'
 
     return render_template_string(f"""
     <!DOCTYPE html>
@@ -260,6 +260,7 @@ def home():
                 <a href="#contact">Contact Us</a>
                 <a href="#tickets">Support Tickets</a>
                 <a href="/my-profile">My Profile</a>
+                {'''<a href="/admin" style="color: #38bdf8; font-weight: bold;">Admin Panel</a>''' if is_admin else ''}
                 <a href="/client-login">Client Portal</a>
             </div>
         </nav>
@@ -268,7 +269,7 @@ def home():
             <div class="card" style="text-align: center; padding: 50px 20px;">
                 <h1>Next-Gen Cloud Security & Social Hub</h1>
                 <p style="color: var(--text-muted); max-width: 650px; margin: 0 auto 20px auto;">Connect with professionals, manage security licenses, and communicate securely through private tickets.</p>
-                {'<p style="color: #34d399; font-weight: bold;">Welcome back, ' + current_user + (ADMIN_BADGE_SVG if user_data['role'] == 'Admin' else (TRUSTED_BLACK_BADGE_SVG if user_data.get('trusted') else '')) + '</p>' if current_user else '<a href="/my-profile" style="background:var(--accent-blue); color:white; padding:10px 20px; border-radius:6px; text-decoration:none; font-weight:bold;">Login / Register (Social Join)</a>'}
+                {'<p style="color: #34d399; font-weight: bold;">Welcome back, ' + current_user + (ADMIN_BADGE_SVG if is_admin else (TRUSTED_BLACK_BADGE_SVG if user_data.get('trusted') else '')) + '</p>' if current_user else '<a href="/my-profile" style="background:var(--accent-blue); color:white; padding:10px 20px; border-radius:6px; text-decoration:none; font-weight:bold;">Login / Register (Social Join)</a>'}
             </div>
 
             <!-- ISS Social Feed -->
@@ -343,7 +344,7 @@ def home():
     </html>
     """)
 
-# --- MY PROFILE (Login & Register with Username, Email, Password) ---
+# --- MY PROFILE (Login, Register & Change Username/Password for both roles) ---
 @app.route("/my-profile", methods=["GET", "POST"])
 def my_profile():
     users = load_users()
@@ -362,7 +363,7 @@ def my_profile():
             if uname in users:
                 error = "Username already exists!"
             else:
-                role = "Admin" if email in admin_emails else "User"
+                role = "Admin" if (email in admin_emails or email == OWNER_EMAIL) else "User"
                 is_verified = True if role == "Admin" else False
                 
                 users[uname] = {
@@ -378,9 +379,10 @@ def my_profile():
 
         elif action == "login":
             uname = request.form.get("username").strip()
+            email = request.form.get("email").strip()
             pwd = request.form.get("password").strip()
 
-            if uname in users and users[uname]["password"] == pwd:
+            if uname in users and users[uname]["password"] == pwd and users[uname]["email"] == email:
                 session["username"] = uname
                 users[uname]["last_active"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 save_all_users(users)
@@ -389,7 +391,28 @@ def my_profile():
                     return redirect(url_for("admin_panel"))
                 return redirect(url_for("my_profile"))
             else:
-                error = "Invalid username or password!"
+                error = "Invalid username, email or password!"
+
+        elif action == "update_credentials" and "username" in session:
+            curr_uname = session["username"]
+            new_uname = request.form.get("new_username", "").strip()
+            new_pwd = request.form.get("new_password", "").strip()
+
+            if curr_uname in users:
+                if new_uname and new_uname != curr_uname:
+                    if new_uname in users:
+                        error = "Username already taken!"
+                    else:
+                        # Rename key in users dictionary
+                        users[new_uname] = users.pop(curr_uname)
+                        curr_uname = new_uname
+                        session["username"] = curr_uname
+
+                if new_pwd:
+                    users[curr_uname]["password"] = new_pwd
+
+                save_all_users(users)
+                msg = "✅ Username and/or Password updated successfully!"
 
         elif action == "update_pic" and "username" in session:
             new_pic = request.form.get("pic").strip()
@@ -451,6 +474,19 @@ def my_profile():
             </div>
 
             {f'''
+            <!-- Change Username & Password Section for Both Roles -->
+            <div style="background:var(--bg-secondary); padding:20px; border-radius:8px; margin-top:20px;">
+                <h4>Change Username & Password</h4>
+                <form method="POST">
+                    <input type="hidden" name="action" value="update_credentials">
+                    <label style="font-size:12px; color:var(--text-muted);">New Username</label>
+                    <input type="text" name="new_username" value="{view_user_name}" required>
+                    <label style="font-size:12px; color:var(--text-muted);">New Password</label>
+                    <input type="password" name="new_password" placeholder="Enter new password" required>
+                    <button type="submit">Update Credentials</button>
+                </form>
+            </div>
+
             <div style="background:var(--bg-secondary); padding:20px; border-radius:8px; margin-top:20px;">
                 <h4>Update Profile Picture</h4>
                 <form method="POST">
@@ -486,21 +522,23 @@ def my_profile():
                 <button onclick="document.getElementById('reg-form').style.display='block'; document.getElementById('login-form').style.display='none';" style="background:#1e293b;">Register</button>
             </div>
 
-            <!-- Simple Login Form (Username, Password) -->
+            <!-- Login Form -->
             <div id="login-form">
                 <h3>Account Login</h3>
-                <p style="font-size:12px; color:var(--text-muted);">Owner Login: <b>admin / admin</b> ({OWNER_EMAIL})</p>
+                <p style="font-size:12px; color:var(--text-muted);">Owner Login: <b>ibrahim / admin</b> ({OWNER_EMAIL})</p>
                 <form method="POST">
                     <input type="hidden" name="action" value="login">
                     <label style="font-size:12px; color:var(--text-muted);">Username</label>
-                    <input type="text" name="username" value="admin" required>
+                    <input type="text" name="username" value="ibrahim" required>
+                    <label style="font-size:12px; color:var(--text-muted);">Email Address</label>
+                    <input type="email" name="email" value="ibrahim@iss.com" required>
                     <label style="font-size:12px; color:var(--text-muted);">Password</label>
                     <input type="password" name="password" value="admin" required>
                     <button type="submit">Login</button>
                 </form>
             </div>
 
-            <!-- Simple Register Form (Username, Email, Password) -->
+            <!-- Register Form -->
             <div id="reg-form" style="display:none;">
                 <h3>Join ISS Social (Register)</h3>
                 <form method="POST">
@@ -610,7 +648,7 @@ def admin_panel():
         <!-- Add Admin Email Section -->
         <div class="box">
             <h3>👥 Add New Admin Email</h3>
-            <p style="font-size:13px; color:#94a3b8;">Enter an email address below to grant admin privileges. When that user registers or logs in with this email, they will automatically become an Admin.</p>
+            <p style="font-size:13px; color:#94a3b8;">Owner Email: <code style="color:#38bdf8;">{OWNER_EMAIL}</code>. Enter an email address below to grant admin privileges. When that user registers or logs in with this email, they will automatically become an Admin.</p>
             <form method="POST" style="display:flex; gap:10px; margin-bottom:15px;">
                 <input type="hidden" name="action" value="add_admin_email">
                 <input type="email" name="new_admin_email" placeholder="Enter admin email (e.g. partner@gmail.com)" required style="flex:1; margin:0;">
