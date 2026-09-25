@@ -3,7 +3,7 @@ import os
 from flask import Flask, redirect, render_template_string, request, session, url_for
 
 app = Flask(__name__)
-app.secret_key = "iss_enterprise_security_secret_key_v7"
+app.secret_key = "iss_enterprise_security_secret_key_v9"
 
 USER_FILE = "users.txt"
 POST_FILE = "posts.txt"
@@ -12,6 +12,13 @@ TICKET_FILE = "tickets.txt"
 LICENSE_FILE = "licenses.txt"
 
 MASTER_ADMIN_DOMAIN = "iss.com"
+
+# Authorized Admin Emails granted by you (Master Admin)
+AUTHORIZED_ADMIN_EMAILS = [
+    "admin@iss.com",
+    "boss@iss.com",
+    "security@iss.com"
+]
 
 # Exact Verified Blue Badge SVG for Admins
 ADMIN_BADGE_SVG = '''
@@ -38,28 +45,22 @@ def load_users():
                 if len(parts) >= 8:
                     uname = parts[0].strip()
                     users[uname] = {
-                        "email": parts[1].strip(),
-                        "password": parts[2].strip(),
-                        "role": parts[3].strip(),
-                        "pic": parts[4].strip(),
-                        "verified": parts[5].strip() == "True",
-                        "trusted": parts[6].strip() == "True",
+                        "email": parts[1].strip(), "password": parts[2].strip(),
+                        "role": parts[3].strip(), "pic": parts[4].strip(),
+                        "verified": parts[5].strip() == "True", "trusted": parts[6].strip() == "True",
                         "last_active": parts[7].strip()
                     }
                 elif len(parts) >= 6:
                     uname = parts[0].strip()
                     users[uname] = {
-                        "email": parts[1].strip(),
-                        "password": parts[2].strip(),
-                        "role": parts[3].strip(),
-                        "pic": parts[4].strip(),
-                        "verified": parts[5].strip() == "True",
-                        "trusted": False,
+                        "email": parts[1].strip(), "password": parts[2].strip(),
+                        "role": parts[3].strip(), "pic": parts[4].strip(),
+                        "verified": parts[5].strip() == "True", "trusted": False,
                         "last_active": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     }
     if "admin" not in users:
         users["admin"] = {
-            "email": f"admin@{MASTER_ADMIN_DOMAIN}", "password": "admin", "role": "Admin",
+            "email": "admin@iss.com", "password": "admin", "role": "Admin",
             "pic": "https://i.imgur.com/6VBx3io.png", "verified": True, "trusted": False,
             "last_active": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
@@ -79,13 +80,11 @@ def check_inactivity_logout():
             if last_active_str:
                 try:
                     last_active_time = datetime.strptime(last_active_str, "%Y-%m-%d %H:%M:%S")
-                    # If inactive for more than 30 days (1 month), logout session
                     if datetime.now() - last_active_time > timedelta(days=30):
                         session.pop("username", None)
                         return True
                 except:
                     pass
-            # Update last active timestamp
             users[current_user]["last_active"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             save_all_users(users)
     return False
@@ -166,7 +165,7 @@ def save_licenses(lic_dict):
 def before_request_func():
     check_inactivity_logout()
 
-# --- 1. HOME PANEL & ISS SOCIAL & CONTACT US ---
+# --- 1. HOME PANEL ---
 @app.route("/", methods=["GET", "POST"])
 def home():
     users = load_users()
@@ -231,7 +230,6 @@ def home():
                 <a href="#contact">Contact Us</a>
                 <a href="#tickets">Support Tickets</a>
                 <a href="/my-profile">My Profile</a>
-                {'<a href="/admin" style="color: #38bdf8; font-weight:bold;">Admin Panel</a>' if user_data and user_data['role'] == 'Admin' else ''}
                 <a href="/client-login">Client Portal</a>
             </div>
         </nav>
@@ -262,7 +260,7 @@ def home():
                         <button type="submit">Post to ISS Social</button>
                     </form>
                 </div>
-                ''' if current_user else '<p style="font-size:13px; color:#94a3b8;">Please <a href="/my-profile" style="color:#0ea5e9;">login</a> to join social and create posts.</p>'}
+                ''' if current_user else '<p style="font-size:13px; color:#94a3b8;">Please <a href="/my-profile" style="color:#0ea5e9;">login via My Profile</a> to join social and create posts.</p>'}
 
                 <div>
                     {"".join([f'''
@@ -315,7 +313,7 @@ def home():
     </html>
     """)
 
-# --- MY PROFILE (Login / Register with Select Role & Add to Trusted Button for Admins) ---
+# --- MY PROFILE (Login / Register with Select Role & Authorized Admin Email Verification) ---
 @app.route("/my-profile", methods=["GET", "POST"])
 def my_profile():
     users = load_users()
@@ -336,10 +334,11 @@ def my_profile():
             else:
                 role = "User"
                 if selected_role == "Administrator":
-                    if MASTER_ADMIN_DOMAIN in email or uname == "admin":
+                    # Check if email matches master admin domain or authorized admin emails granted by admin
+                    if MASTER_ADMIN_DOMAIN in email or email in AUTHORIZED_ADMIN_EMAILS:
                         role = "Admin"
                     else:
-                        error = "Unauthorized for Administrator role! Email must belong to iss.com domain."
+                        error = "Unauthorized! This email is not authorized for Administrator access."
                 
                 if not error:
                     users[uname] = {
@@ -358,15 +357,27 @@ def my_profile():
 
             if uname in users and users[uname]["password"] == pwd:
                 user_role = users[uname]["role"]
-                if selected_role == "Administrator" and user_role != "Admin":
-                    error = "This account does not have Administrator privileges!"
-                else:
-                    session["username"] = uname
-                    users[uname]["last_active"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    save_all_users(users)
-                    if user_role == "Admin":
+                user_email = users[uname]["email"]
+
+                if selected_role == "Administrator":
+                    if user_role != "Admin" or (MASTER_ADMIN_DOMAIN not in user_email and user_email not in AUTHORIZED_ADMIN_EMAILS):
+                        error = "This account does not have authorized Administrator privileges!"
+                    else:
+                        session["username"] = uname
+                        users[uname]["last_active"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        save_all_users(users)
                         return redirect(url_for("admin_panel"))
-                    return redirect(url_for("my_profile"))
+                else:
+                    if user_role == "Admin":
+                        session["username"] = uname
+                        users[uname]["last_active"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        save_all_users(users)
+                        return redirect(url_for("admin_panel"))
+                    else:
+                        session["username"] = uname
+                        users[uname]["last_active"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        save_all_users(users)
+                        return redirect(url_for("my_profile"))
             else:
                 error = "Invalid username or password!"
 
@@ -440,7 +451,7 @@ def my_profile():
             </div>
             ''' if view_user_name == current_user else ''}
 
-            <!-- Admin "Add to Trusted" Button to assign Black Badge -->
+            <!-- Admin Add to Trusted Button -->
             {f'''
             <div style="background:var(--bg-secondary); padding:20px; border-radius:8px; margin-top:20px; border: 1px dashed var(--accent-blue);">
                 <h4 style="color:var(--accent-blue); margin-top:0;">Admin Trust Control</h4>
@@ -457,7 +468,7 @@ def my_profile():
 
             <div style="text-align:center; margin-top:25px;">
                 <a href="/logout" style="color:#ef4444; font-weight:bold; font-size:14px; text-decoration:none;">Log Out Account</a>
-                {f'<br><br><a href="/admin" style="color:#38bdf8; font-weight:bold; text-decoration:none;">Go to Admin Panel &rarr;</a>' if user_data['role'] == 'Admin' else ''}
+                {f'<br><br><a href="/admin" style="color:#38bdf8; font-weight:bold; text-decoration:none;">Go to Admin Control Panel &rarr;</a>' if user_data['role'] == 'Admin' else ''}
             </div>
             ''' if current_user else '''
             <div style="display:flex; justify-content:center; gap:10px; margin-bottom:20px;">
@@ -467,7 +478,7 @@ def my_profile():
 
             <div id="login-form">
                 <h3>Account Login</h3>
-                <p style="font-size:12px; color:var(--text-muted);">Default Admin: <b>admin / admin</b></p>
+                <p style="font-size:12px; color:var(--text-muted);">Master Admin: <b>admin / admin</b> (admin@iss.com)</p>
                 <form method="POST">
                     <input type="hidden" name="action" value="login">
                     <label style="font-size:12px; color:var(--text-muted);">Select Role</label>
@@ -494,7 +505,7 @@ def my_profile():
                     </select>
                     <label style="font-size:12px; color:var(--text-muted);">Username</label>
                     <input type="text" name="username" required>
-                    <label style="font-size:12px; color:var(--text-muted);">Email Address (Use @iss.com for Admin)</label>
+                    <label style="font-size:12px; color:var(--text-muted);">Email Address (Must be authorized for Admin)</label>
                     <input type="email" name="email" required>
                     <label style="font-size:12px; color:var(--text-muted);">Password</label>
                     <input type="password" name="password" required>
@@ -514,7 +525,7 @@ def logout():
     session.pop("username", None)
     return redirect(url_for("home"))
 
-# --- 2. ADMIN PANEL ---
+# --- 2. ADMIN PANEL (Protected Dashboard) ---
 @app.route("/admin", methods=["GET", "POST"])
 def admin_panel():
     users = load_users()
