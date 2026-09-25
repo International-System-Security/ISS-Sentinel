@@ -45,7 +45,7 @@ def home():
     <p>Admin Dashboard: <a href='/admin?key=my_super_secret_admin_key_123'>/admin</a></p>
     """
 
-# ১. অ্যাডমিন ড্যাশবোর্ড (Clean Plans & Calendar with Plan Label)
+# ১. অ্যাডমিন ড্যাশবোর্ড (1 Month/Year + Calendar with Plan Tag Option)
 @app.route("/admin", methods=["GET"])
 def admin_panel():
     key = request.args.get("key")
@@ -79,15 +79,16 @@ def admin_panel():
         <style>
             body {{ font-family: Arial, sans-serif; background: #f4f4f9; padding: 15px; margin: 0; }}
             .container {{ display: flex; gap: 20px; flex-wrap: wrap; }}
-            .box {{ background: white; padding: 20px; border-radius: 8px; width: 100%%; max-width: 380px; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); box-sizing: border-box; }}
+            .box {{ background: white; padding: 20px; border-radius: 8px; width: 100%%; max-width: 400px; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); box-sizing: border-box; }}
             .table-box {{ background: white; padding: 20px; border-radius: 8px; flex-grow: 1; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); overflow-x: auto; box-sizing: border-box; }}
             input, select {{ width: 100%%; padding: 10px; margin: 6px 0 12px 0; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 4px; }}
             button {{ background: #2563eb; color: white; padding: 12px; border: none; width: 100%%; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 15px; }}
             table {{ width: 100%%; border-collapse: collapse; margin-top: 10px; min-width: 600px; }}
             th, td {{ border: 1px solid #e2e8f0; padding: 10px; text-align: left; font-size: 13px; }}
             th {{ background-color: #0f172a; color: white; }}
-            .calendar-label {{ font-size: 13px; font-weight: bold; color: #1e293b; display: flex; justify-content: space-between; align-items: center; margin-top: 5px; }}
-            .calendar-badge {{ background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-size: 11px; }}
+            .calendar-row {{ display: flex; gap: 10px; align-items: center; margin-top: 5px; }}
+            .calendar-row input[type="date"] {{ flex: 2; margin-bottom: 0; }}
+            .calendar-row select {{ flex: 1.2; margin-bottom: 0; background: #f8fafc; font-weight: bold; color: #0284c7; }}
         </style>
     </head>
     <body>
@@ -104,20 +105,27 @@ def admin_panel():
                     <label>License ID:</label>
                     <input type="text" name="license" placeholder="e.g. iss-1111-2026" required>
                     
-                    <label>Select Plan Type:</label>
+                    <label>Select Standard Plan:</label>
                     <select name="plan_choice">
-                        <option value="Basic-Monthly">Basic Plan (1 Device - Monthly)</option>
-                        <option value="Standard-Monthly">Standard Plan (3 Devices - Monthly)</option>
-                        <option value="Enterprise-Monthly">Enterprise Plan (5 Devices - Monthly)</option>
-                        <option value="Custom-Duration">Custom Duration (Flexible Days/Months)</option>
+                        <option value="Basic-1Month">Basic Plan (1 Device - 1 Month)</option>
+                        <option value="Basic-1Year">Basic Plan (1 Device - 1 Year)</option>
+                        <option value="Standard-1Month">Standard Plan (3 Devices - 1 Month)</option>
+                        <option value="Standard-1Year">Standard Plan (3 Devices - 1 Year)</option>
+                        <option value="Enterprise-1Month">Enterprise Plan (5 Devices - 1 Month)</option>
+                        <option value="Enterprise-1Year">Enterprise Plan (5 Devices - 1 Year)</option>
+                        <option value="Custom-Duration">Custom Duration (Use Calendar & Tag Below)</option>
                     </select>
 
-                    <div class="calendar-label">
-                        <span>Custom Expiry Date (Calendar):</span>
-                        <span class="calendar-badge">নির্দিষ্ট মেয়াদ সিলেক্ট করুন</span>
+                    <label>Custom Expiry Date & Subscription Tag:</label>
+                    <div class="calendar-row">
+                        <input type="date" name="custom_expiry" value="{default_expiry}">
+                        <select name="custom_plan_tag">
+                            <option value="Basic (Custom)">Basic</option>
+                            <option value="Standard (Custom)">Standard</option>
+                            <option value="Enterprise (Custom)">Enterprise</option>
+                        </select>
                     </div>
-                    <input type="date" name="custom_expiry" value="{default_expiry}">
-                    <small style="color: #64748b; display: block; margin-top: -6px; margin-bottom: 12px;">(ক্লায়েন্ট যদি ৩ মাস, ১০ দিন বা পছন্দমতো মেয়াদের নেয়, তবে ক্যালেন্ডার থেকে ঠিক করে দিন)</small>
+                    <small style="color: #64748b; display: block; margin-top: 6px; margin-bottom: 12px;">(যদি ২ বা ৩ মাস বা কাস্টম দিনের দেন, তবে ক্যালেন্ডার থেকে ডেট দিন এবং পাশ থেকে প্ল্যানের ধরণ সিলেক্ট করে দিন)</small>
 
                     <button type="submit">Create License ID</button>
                 </form>
@@ -151,34 +159,50 @@ def add_client():
     license_key = request.form.get("license")
     plan_choice = request.form.get("plan_choice")
     custom_expiry = request.form.get("custom_expiry")
+    custom_plan_tag = request.form.get("custom_plan_tag")
 
     if admin_key != ADMIN_SECRET_KEY:
         return "Unauthorized!", 401
 
     max_devices = 3
-    if "Basic" in plan_choice:
-        max_devices = 1
-    elif "Enterprise" in plan_choice:
-        max_devices = 5
+    final_plan_type = plan_choice
 
-    # ক্যালেন্ডার থেকে সিলেক্ট করা নির্দিষ্ট এক্সপায়ারি ডেট সরাসরি সংরক্ষণ হবে
-    expiry_date = custom_expiry if custom_expiry else (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+    # যদি কাস্টম ডুরেশন সিলেক্ট করা হয়, তবে ক্যালেন্ডারের ডেট এবং পাশের সাবস্ক্রিপশন ট্যাগ অনুযায়ী প্ল্যান নাম ও ডিভাইস লিমিট সেট হবে
+    if plan_choice == "Custom-Duration":
+        expiry_date = custom_expiry if custom_expiry else (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+        final_plan_type = custom_plan_tag  # যেমন: Basic (Custom), Standard (Custom) ইত্যাদি
+        if "Basic" in custom_plan_tag:
+            max_devices = 1
+        elif "Enterprise" in custom_plan_tag:
+            max_devices = 5
+        else:
+            max_devices = 3
+    else:
+        # স্ট্যান্ডার্ড ১ মাস বা ১ বছরের লজিক
+        if "1Year" in plan_choice:
+            expiry_date = (datetime.now() + timedelta(days=365)).strftime("%Y-%m-%d")
+        else:
+            expiry_date = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
 
-    # যদি ইউজার Custom সিলেক্ট না করে স্ট্যান্ডার্ড প্ল্যান দেয়, তবুও সুবিধার জন্য সেটির নাম প্ল্যান টাইপে থাকবে
+        if "Basic" in plan_choice:
+            max_devices = 1
+        elif "Enterprise" in plan_choice:
+            max_devices = 5
+
     licenses = load_licenses()
     licenses[license_key] = {
         "name": client_name,
         "org": org_name,
         "expiry": expiry_date,
         "max_devices": max_devices,
-        "plan_type": plan_choice,
+        "plan_type": final_plan_type,
         "pcs": []
     }
     save_all_licenses(licenses)
 
     return f"""
     <body style="font-family: Arial; padding: 30px; text-align: center;">
-        <h3>Success! License ID <b>{license_key}</b> created with expiry date: {expiry_date}</h3>
+        <h3>Success! License ID <b>{license_key}</b> created with expiry date: {expiry_date} ({final_plan_type})</h3>
         <a href="/admin?key={ADMIN_SECRET_KEY}" style="background: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 15px;">Back to Dashboard</a>
     </body>
     """
