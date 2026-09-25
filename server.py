@@ -3,7 +3,7 @@ import os
 from flask import Flask, redirect, render_template_string, request, session, url_for
 
 app = Flask(__name__)
-app.secret_key = "iss_enterprise_security_secret_key_v10"
+app.secret_key = "iss_enterprise_security_secret_key_v12"
 
 USER_FILE = "users.txt"
 POST_FILE = "posts.txt"
@@ -51,7 +51,7 @@ def save_admin_email(email):
 
 def remove_admin_email(email):
     admins = load_admin_emails()
-    if email in admins and email != OWNER_EMAIL:
+    if email in admins and email != OWNER_EMAIL and email != "admin@iss.com":
         admins.remove(email)
         with open(ADMIN_LIST_FILE, "w") as f:
             for ad in admins:
@@ -60,24 +60,32 @@ def remove_admin_email(email):
 
 def load_users():
     users = {}
+    admin_emails = load_admin_emails()
     if os.path.exists(USER_FILE):
         with open(USER_FILE, "r") as f:
             for line in f:
                 parts = line.strip().split("|||")
                 if len(parts) >= 8:
                     uname = parts[0].strip()
+                    email = parts[1].strip()
+                    # Auto assign admin role if email is in admin list
+                    role = "Admin" if email in admin_emails else parts[3].strip()
+                    verified = True if role == "Admin" else parts[5].strip() == "True"
                     users[uname] = {
-                        "email": parts[1].strip(), "password": parts[2].strip(),
-                        "role": parts[3].strip(), "pic": parts[4].strip(),
-                        "verified": parts[5].strip() == "True", "trusted": parts[6].strip() == "True",
+                        "email": email, "password": parts[2].strip(),
+                        "role": role, "pic": parts[4].strip(),
+                        "verified": verified, "trusted": parts[6].strip() == "True",
                         "last_active": parts[7].strip()
                     }
                 elif len(parts) >= 6:
                     uname = parts[0].strip()
+                    email = parts[1].strip()
+                    role = "Admin" if email in admin_emails else parts[3].strip()
+                    verified = True if role == "Admin" else parts[5].strip() == "True"
                     users[uname] = {
-                        "email": parts[1].strip(), "password": parts[2].strip(),
-                        "role": parts[3].strip(), "pic": parts[4].strip(),
-                        "verified": parts[5].strip() == "True", "trusted": False,
+                        "email": email, "password": parts[2].strip(),
+                        "role": role, "pic": parts[4].strip(),
+                        "verified": verified, "trusted": False,
                         "last_active": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     }
     if "admin" not in users:
@@ -335,7 +343,7 @@ def home():
     </html>
     """)
 
-# --- MY PROFILE ---
+# --- MY PROFILE (Login & Register with Username, Email, Password) ---
 @app.route("/my-profile", methods=["GET", "POST"])
 def my_profile():
     users = load_users()
@@ -349,57 +357,37 @@ def my_profile():
             uname = request.form.get("username").strip()
             email = request.form.get("email").strip()
             pwd = request.form.get("password").strip()
-            selected_role = request.form.get("role_selection")
             pic = request.form.get("pic").strip() or "https://i.imgur.com/6VBx3io.png"
 
             if uname in users:
                 error = "Username already exists!"
             else:
-                role = "User"
-                if selected_role == "Administrator":
-                    if email in admin_emails:
-                        role = "Admin"
-                    else:
-                        error = "Unauthorized! This email is not authorized for Administrator access."
+                role = "Admin" if email in admin_emails else "User"
+                is_verified = True if role == "Admin" else False
                 
-                if not error:
-                    users[uname] = {
-                        "email": email, "password": pwd, "role": role, "pic": pic,
-                        "verified": role == "Admin", "trusted": False,
-                        "last_active": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    }
-                    save_all_users(users)
-                    session["username"] = uname
-                    return redirect(url_for("my_profile"))
+                users[uname] = {
+                    "email": email, "password": pwd, "role": role, "pic": pic,
+                    "verified": is_verified, "trusted": False,
+                    "last_active": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                }
+                save_all_users(users)
+                session["username"] = uname
+                if role == "Admin":
+                    return redirect(url_for("admin_panel"))
+                return redirect(url_for("my_profile"))
 
         elif action == "login":
             uname = request.form.get("username").strip()
             pwd = request.form.get("password").strip()
-            selected_role = request.form.get("role_selection")
 
             if uname in users and users[uname]["password"] == pwd:
-                user_role = users[uname]["role"]
-                user_email = users[uname]["email"]
-
-                if selected_role == "Administrator":
-                    if user_role != "Admin" or user_email not in admin_emails:
-                        error = "This account does not have authorized Administrator privileges!"
-                    else:
-                        session["username"] = uname
-                        users[uname]["last_active"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        save_all_users(users)
-                        return redirect(url_for("admin_panel"))
-                else:
-                    if user_role == "Admin":
-                        session["username"] = uname
-                        users[uname]["last_active"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        save_all_users(users)
-                        return redirect(url_for("admin_panel"))
-                    else:
-                        session["username"] = uname
-                        users[uname]["last_active"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        save_all_users(users)
-                        return redirect(url_for("my_profile"))
+                session["username"] = uname
+                users[uname]["last_active"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                save_all_users(users)
+                
+                if users[uname]["role"] == "Admin":
+                    return redirect(url_for("admin_panel"))
+                return redirect(url_for("my_profile"))
             else:
                 error = "Invalid username or password!"
 
@@ -498,16 +486,12 @@ def my_profile():
                 <button onclick="document.getElementById('reg-form').style.display='block'; document.getElementById('login-form').style.display='none';" style="background:#1e293b;">Register</button>
             </div>
 
+            <!-- Simple Login Form (Username, Password) -->
             <div id="login-form">
                 <h3>Account Login</h3>
-                <p style="font-size:12px; color:var(--text-muted);">Owner: <b>admin / admin</b> ({OWNER_EMAIL})</p>
+                <p style="font-size:12px; color:var(--text-muted);">Owner Login: <b>admin / admin</b> ({OWNER_EMAIL})</p>
                 <form method="POST">
                     <input type="hidden" name="action" value="login">
-                    <label style="font-size:12px; color:var(--text-muted);">Select Role</label>
-                    <select name="role_selection">
-                        <option value="Member">Member</option>
-                        <option value="Administrator">Administrator</option>
-                    </select>
                     <label style="font-size:12px; color:var(--text-muted);">Username</label>
                     <input type="text" name="username" value="admin" required>
                     <label style="font-size:12px; color:var(--text-muted);">Password</label>
@@ -516,18 +500,14 @@ def my_profile():
                 </form>
             </div>
 
+            <!-- Simple Register Form (Username, Email, Password) -->
             <div id="reg-form" style="display:none;">
                 <h3>Join ISS Social (Register)</h3>
                 <form method="POST">
                     <input type="hidden" name="action" value="register">
-                    <label style="font-size:12px; color:var(--text-muted);">Select Role</label>
-                    <select name="role_selection">
-                        <option value="Member">Member</option>
-                        <option value="Administrator">Administrator</option>
-                    </select>
                     <label style="font-size:12px; color:var(--text-muted);">Username</label>
                     <input type="text" name="username" required>
-                    <label style="font-size:12px; color:var(--text-muted);">Email Address (Must be authorized for Admin)</label>
+                    <label style="font-size:12px; color:var(--text-muted);">Email Address</label>
                     <input type="email" name="email" required>
                     <label style="font-size:12px; color:var(--text-muted);">Password</label>
                     <input type="password" name="password" required>
@@ -547,7 +527,7 @@ def logout():
     session.pop("username", None)
     return redirect(url_for("home"))
 
-# --- 2. ADMIN PANEL (With Admin Email Manager & Full License Creator) ---
+# --- 2. ADMIN PANEL ---
 @app.route("/admin", methods=["GET", "POST"])
 def admin_panel():
     users = load_users()
@@ -627,14 +607,14 @@ def admin_panel():
 
         {f'<div style="background: rgba(16,185,129,0.1); border: 1px solid #10b981; color: #34d399; padding: 12px; border-radius: 8px; margin-bottom: 20px;">{msg}</div>' if msg else ''}
 
-        <!-- Manage Admin Emails Section -->
+        <!-- Add Admin Email Section -->
         <div class="box">
-            <h3>👥 Manage Authorized Admin Emails</h3>
-            <p style="font-size:13px; color:#94a3b8;">Owner Email: <code style="color:#38bdf8;">{OWNER_EMAIL}</code>. Add or remove emails permitted to use the Administrator role.</p>
+            <h3>👥 Add New Admin Email</h3>
+            <p style="font-size:13px; color:#94a3b8;">Enter an email address below to grant admin privileges. When that user registers or logs in with this email, they will automatically become an Admin.</p>
             <form method="POST" style="display:flex; gap:10px; margin-bottom:15px;">
                 <input type="hidden" name="action" value="add_admin_email">
-                <input type="email" name="new_admin_email" placeholder="New admin email address (e.g. partner@iss.com)" required style="flex:1; margin:0;">
-                <button type="submit" style="width:auto; margin:0;">Authorize Admin Email</button>
+                <input type="email" name="new_admin_email" placeholder="Enter admin email (e.g. partner@gmail.com)" required style="flex:1; margin:0;">
+                <button type="submit" style="width:auto; margin:0;">Add Admin Email</button>
             </form>
             <ul>
                 {"".join([f'<li style="font-size:13px; margin:5px 0;">{em} ' + (f'<form method="POST" style="display:inline; margin-left:10px;"><input type="hidden" name="action" value="remove_admin_email"><input type="hidden" name="remove_email" value="{em}"><button type="submit" style="background:#ef4444; padding:2px 8px; font-size:11px;">Remove</button></form>' if em != OWNER_EMAIL and em != "admin@iss.com" else '<span style="color:#38bdf8; font-size:11px;">(Owner / Master)</span>') + '</li>' for em in admin_emails])}
