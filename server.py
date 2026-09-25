@@ -45,7 +45,7 @@ def home():
     <p>Admin Dashboard: <a href='/admin?key=my_super_secret_admin_key_123'>/admin</a></p>
     """
 
-# ১. অ্যাডমিন ড্যাশবোর্ড (1 Month/Year + Calendar with Plan Tag Option)
+# ১. অ্যাডমিন ড্যাশবোর্ড (1 Month/Year + Side-by-side Calendar and Plan Selector)
 @app.route("/admin", methods=["GET"])
 def admin_panel():
     key = request.args.get("key")
@@ -79,16 +79,16 @@ def admin_panel():
         <style>
             body {{ font-family: Arial, sans-serif; background: #f4f4f9; padding: 15px; margin: 0; }}
             .container {{ display: flex; gap: 20px; flex-wrap: wrap; }}
-            .box {{ background: white; padding: 20px; border-radius: 8px; width: 100%%; max-width: 400px; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); box-sizing: border-box; }}
+            .box {{ background: white; padding: 20px; border-radius: 8px; width: 100%%; max-width: 430px; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); box-sizing: border-box; }}
             .table-box {{ background: white; padding: 20px; border-radius: 8px; flex-grow: 1; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); overflow-x: auto; box-sizing: border-box; }}
             input, select {{ width: 100%%; padding: 10px; margin: 6px 0 12px 0; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 4px; }}
             button {{ background: #2563eb; color: white; padding: 12px; border: none; width: 100%%; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 15px; }}
             table {{ width: 100%%; border-collapse: collapse; margin-top: 10px; min-width: 600px; }}
             th, td {{ border: 1px solid #e2e8f0; padding: 10px; text-align: left; font-size: 13px; }}
             th {{ background-color: #0f172a; color: white; }}
-            .calendar-row {{ display: flex; gap: 10px; align-items: center; margin-top: 5px; }}
-            .calendar-row input[type="date"] {{ flex: 2; margin-bottom: 0; }}
-            .calendar-row select {{ flex: 1.2; margin-bottom: 0; background: #f8fafc; font-weight: bold; color: #0284c7; }}
+            .side-by-side {{ display: flex; gap: 10px; align-items: center; margin-top: 5px; }}
+            .side-by-side input[type="date"] {{ flex: 1.3; margin-bottom: 0; }}
+            .side-by-side select {{ flex: 1.2; margin-bottom: 0; background: #f8fafc; font-weight: bold; color: #0284c7; }}
         </style>
     </head>
     <body>
@@ -105,7 +105,7 @@ def admin_panel():
                     <label>License ID:</label>
                     <input type="text" name="license" placeholder="e.g. iss-1111-2026" required>
                     
-                    <label>Select Standard Plan:</label>
+                    <label>Standard Plans (1 Month / 1 Year):</label>
                     <select name="plan_choice">
                         <option value="Basic-1Month">Basic Plan (1 Device - 1 Month)</option>
                         <option value="Basic-1Year">Basic Plan (1 Device - 1 Year)</option>
@@ -113,19 +113,19 @@ def admin_panel():
                         <option value="Standard-1Year">Standard Plan (3 Devices - 1 Year)</option>
                         <option value="Enterprise-1Month">Enterprise Plan (5 Devices - 1 Month)</option>
                         <option value="Enterprise-1Year">Enterprise Plan (5 Devices - 1 Year)</option>
-                        <option value="Custom-Duration">Custom Duration (Use Calendar & Tag Below)</option>
+                        <option value="Custom-Duration">Custom Duration (Use Calendar & Plan Selector Below)</option>
                     </select>
 
-                    <label>Custom Expiry Date & Subscription Tag:</label>
-                    <div class="calendar-row">
+                    <label>Custom Expiry Date & Plan Selector (পাশাপাশি অপশন):</label>
+                    <div class="side-by-side">
                         <input type="date" name="custom_expiry" value="{default_expiry}">
-                        <select name="custom_plan_tag">
-                            <option value="Basic (Custom)">Basic</option>
-                            <option value="Standard (Custom)">Standard</option>
-                            <option value="Enterprise (Custom)">Enterprise</option>
+                        <select name="custom_plan_type">
+                            <option value="Basic (Custom/Trial)">Basic</option>
+                            <option value="Standard (Custom/Trial)">Standard</option>
+                            <option value="Enterprise (Custom/Trial)">Enterprise</option>
                         </select>
                     </div>
-                    <small style="color: #64748b; display: block; margin-top: 6px; margin-bottom: 12px;">(যদি ২ বা ৩ মাস বা কাস্টম দিনের দেন, তবে ক্যালেন্ডার থেকে ডেট দিন এবং পাশ থেকে প্ল্যানের ধরণ সিলেক্ট করে দিন)</small>
+                    <small style="color: #64748b; display: block; margin-top: 6px; margin-bottom: 12px;">(যদি কাউকে নির্দিষ্ট দিন বা ট্রায়াল দিতে চান, তবে ওপরের অপশনে 'Custom Duration' সিলেক্ট করে এখান থেকে ক্যালেন্ডারে ডেট এবং পাশে প্ল্যান সিলেক্ট করে দিন)</small>
 
                     <button type="submit">Create License ID</button>
                 </form>
@@ -159,7 +159,7 @@ def add_client():
     license_key = request.form.get("license")
     plan_choice = request.form.get("plan_choice")
     custom_expiry = request.form.get("custom_expiry")
-    custom_plan_tag = request.form.get("custom_plan_tag")
+    custom_plan_type = request.form.get("custom_plan_type")
 
     if admin_key != ADMIN_SECRET_KEY:
         return "Unauthorized!", 401
@@ -167,13 +167,14 @@ def add_client():
     max_devices = 3
     final_plan_type = plan_choice
 
-    # যদি কাস্টম ডুরেশন সিলেক্ট করা হয়, তবে ক্যালেন্ডারের ডেট এবং পাশের সাবস্ক্রিপশন ট্যাগ অনুযায়ী প্ল্যান নাম ও ডিভাইস লিমিট সেট হবে
+    # যদি Custom Duration সিলেক্ট করা হয়, তবে ক্যালেন্ডার ডেট এবং পাশের প্ল্যান টাইপ ব্যবহার হবে
     if plan_choice == "Custom-Duration":
         expiry_date = custom_expiry if custom_expiry else (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
-        final_plan_type = custom_plan_tag  # যেমন: Basic (Custom), Standard (Custom) ইত্যাদি
-        if "Basic" in custom_plan_tag:
+        final_plan_type = custom_plan_type  # যেমন: Basic, Standard বা Enterprise
+        
+        if "Basic" in custom_plan_type:
             max_devices = 1
-        elif "Enterprise" in custom_plan_tag:
+        elif "Enterprise" in custom_plan_type:
             max_devices = 5
         else:
             max_devices = 3
