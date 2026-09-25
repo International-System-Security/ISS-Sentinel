@@ -53,7 +53,7 @@ def save_all_licenses(licenses_dict):
             pcs_str = ",".join(v["pcs"])
             f.write(f"{k},{v['name']},{v['org']},{v['expiry']},{v['max_devices']},{v['plan_type']},{v['client_user']},{v['client_pwd']},{pcs_str}\n")
 
-# --- Professional Landing Page ---
+# --- Official Professional Security Website Home Page ---
 @app.route("/", methods=["GET"])
 def home():
     return """
@@ -62,82 +62,156 @@ def home():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>ISS Cloud Security & Enterprise Antivirus</title>
+        <title>ISS Cloud Security | Next-Gen Enterprise Antivirus & Protection</title>
         <style>
             :root {
-                --bg-primary: #090d16;
+                --bg-primary: #060913;
+                --bg-secondary: #0b1120;
                 --bg-card: #111827;
                 --accent-blue: #0ea5e9;
                 --accent-hover: #0284c7;
+                --accent-glow: rgba(14, 165, 233, 0.15);
                 --text-main: #f8fafc;
                 --text-muted: #94a3b8;
                 --border-color: #1e293b;
             }
             body {
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
                 background-color: var(--bg-primary);
                 color: var(--text-main);
                 margin: 0; padding: 0;
                 display: flex; flex-direction: column; min-height: 100vh;
-                justify-content: space-between;
+                overflow-x: hidden;
             }
-            .header {
-                padding: 20px 40px; display: flex; justify-content: space-between; align-items: center;
-                border-bottom: 1px solid var(--border-color);
+            .navbar {
+                display: flex; justify-content: space-between; align-items: center;
+                padding: 20px 8%; border-bottom: 1px solid var(--border-color);
+                background: rgba(6, 9, 19, 0.85); backdrop-filter: blur(10px);
+                position: sticky; top: 0; z-index: 1000;
             }
             .logo {
-                font-size: 20px; font-weight: bold; letter-spacing: 1px; color: var(--accent-blue);
-                display: flex; align-items: center; gap: 8px;
+                font-size: 22px; font-weight: 800; letter-spacing: 1px; color: var(--text-main);
+                display: flex; align-items: center; gap: 10px; text-decoration: none;
             }
-            .container { max-width: 900px; margin: auto; text-align: center; padding: 40px 20px; }
+            .logo span { color: var(--accent-blue); }
+            .nav-links { display: flex; gap: 25px; align-items: center; }
+            .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.2s; }
+            .nav-links a:hover { color: var(--accent-blue); }
+            
+            .btn {
+                display: inline-block; background-color: var(--accent-blue); color: white;
+                padding: 12px 26px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;
+                transition: all 0.2s ease; box-shadow: 0 4px 14px rgba(14, 165, 233, 0.3);
+            }
+            .btn:hover { background-color: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(14, 165, 233, 0.4); }
+            .btn-outline { background-color: transparent; border: 1px solid var(--border-color); color: var(--text-main); box-shadow: none; }
+            .btn-outline:hover { border-color: var(--accent-blue); background-color: var(--accent-glow); color: var(--accent-blue); }
+
+            .hero {
+                text-align: center; padding: 100px 20px 80px 20px;
+                max-width: 950px; margin: 0 auto; position: relative;
+            }
+            .badge-pill {
+                display: inline-flex; align-items: center; gap: 8px;
+                background: var(--bg-secondary); border: 1px solid var(--border-color);
+                padding: 6px 16px; border-radius: 30px; font-size: 13px; color: var(--accent-blue);
+                font-weight: 600; margin-bottom: 20px;
+            }
             h1 {
-                font-size: 42px; margin-bottom: 15px; font-weight: 800;
+                font-size: 52px; line-height: 1.15; margin-bottom: 20px; font-weight: 800;
+                letter-spacing: -1px;
+                background: linear-gradient(to right, #ffffff, #94a3b8);
+                -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            }
+            h1 span {
                 background: linear-gradient(to right, #38bdf8, #818cf8);
                 -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             }
-            p.subtitle { font-size: 18px; color: var(--text-muted); margin-bottom: 40px; line-height: 1.6; }
-            .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 40px; }
+            p.subtitle {
+                font-size: 18px; color: var(--text-muted); margin-bottom: 40px; line-height: 1.7;
+                max-width: 750px; margin-left: auto; margin-right: auto;
+            }
+            .hero-btns { display: flex; gap: 15px; justify-content: center; margin-bottom: 60px; flex-wrap: wrap; }
+
+            .features-section { padding: 60px 8% 100px 8%; background: var(--bg-secondary); border-top: 1px solid var(--border-color); }
+            .section-title { text-align: center; max-width: 600px; margin: 0 auto 50px auto; }
+            .section-title h2 { font-size: 32px; font-weight: 700; margin-bottom: 15px; }
+            .section-title p { color: var(--text-muted); font-size: 15px; }
+            
+            .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; }
             .card {
-                background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px;
-                padding: 30px; text-align: left; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-                transition: transform 0.2s, border-color 0.2s;
+                background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px;
+                padding: 35px 30px; text-align: left; transition: all 0.3s ease;
             }
-            .card:hover { transform: translateY(-5px); border-color: var(--accent-blue); }
-            .card h3 { margin-top: 0; font-size: 20px; color: var(--text-main); }
-            .card p { color: var(--text-muted); font-size: 14px; line-height: 1.5; }
-            .btn {
-                display: inline-block; background-color: var(--accent-blue); color: white;
-                padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px;
-                margin-top: 15px; transition: background-color 0.2s;
+            .card:hover { transform: translateY(-6px); border-color: var(--accent-blue); box-shadow: 0 15px 30px rgba(0,0,0,0.4); }
+            .card-icon { font-size: 32px; margin-bottom: 20px; display: inline-block; background: var(--bg-primary); padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); }
+            .card h3 { margin: 0 0 10px 0; font-size: 20px; color: var(--text-main); }
+            .card p { color: var(--text-muted); font-size: 14px; line-height: 1.6; margin: 0; }
+
+            .footer {
+                text-align: center; padding: 30px 8%; color: var(--text-muted); font-size: 13px;
+                border-top: 1px solid var(--border-color); background: var(--bg-primary);
+                margin-top: auto; display: flex; justify-content: space-between; align-items: center;
+                flex-wrap: wrap; gap: 15px;
             }
-            .btn:hover { background-color: var(--accent-hover); }
-            .btn-outline { background-color: transparent; border: 1px solid var(--accent-blue); color: var(--accent-blue); }
-            .btn-outline:hover { background-color: var(--accent-blue); color: white; }
-            .footer { text-align: center; padding: 20px; color: var(--text-muted); font-size: 13px; border-top: 1px solid var(--border-color); }
+            @media(max-width: 768px) {
+                h1 { font-size: 36px; }
+                .navbar { padding: 15px 5%; }
+                .footer { padding-left: 5%; padding-right: 5%; justify-content: center; text-align: center; }
+            }
         </style>
     </head>
     <body>
-        <div class="header">
-            <div class="logo">🛡️ ISS CLOUD SECURITY</div>
-            <div><a href="/client-login" class="btn btn-outline" style="margin-top:0; padding: 8px 16px;">Client Portal</a></div>
+        <nav class="navbar">
+            <a href="/" class="logo">🛡️ ISS <span>SECURITY</span></a>
+            <div class="nav-links">
+                <a href="/client-login">Client Portal</a>
+                <a href="/admin/login">Admin Center</a>
+                <a href="/client-login" class="btn" style="padding: 8px 18px; font-size: 13px;">Get Protected</a>
+            </div>
+        </nav>
+
+        <div class="hero">
+            <div class="badge-pill">✨ Next-Generation Endpoint Intelligence</div>
+            <h1>Secure Your Enterprise Fleet with <span>Cloud Intelligence</span></h1>
+            <p class="subtitle">Advanced real-time threat detection, centralized device licensing control, and lightning-fast cloud scanning built for modern digital infrastructure.</p>
+            <div class="hero-btns">
+                <a href="/client-login" class="btn">Access Client Portal</a>
+                <a href="/admin/login" class="btn btn-outline">Admin Dashboard Login</a>
+            </div>
         </div>
-        <div class="container">
-            <h1>Next-Gen Cloud Endpoint Security</h1>
-            <p class="subtitle">Advanced enterprise-grade protection, real-time threat intelligence, and centralized device management backed by ISS infrastructure.</p>
+
+        <div class="features-section">
+            <div class="section-title">
+                <h2>Enterprise-Grade Defense System</h2>
+                <p>Engineered to protect digital assets against complex malware, unauthorized connections, and emerging cyber threats.</p>
+            </div>
             <div class="cards-grid">
                 <div class="card">
-                    <h3>Client Portal</h3>
-                    <p>Manage your active license, monitor connected devices, and secure your endpoints instantly with one-click setup.</p>
-                    <a href="/client-login" class="btn">Access Client Portal</a>
+                    <div class="card-icon">⚡</div>
+                    <h3>Real-Time Cloud Scanning</h3>
+                    <p>Instantaneous file hash evaluation against global threat intelligence databases to block malicious payloads instantly.</p>
                 </div>
                 <div class="card">
-                    <h3>Admin Dashboard</h3>
-                    <p>Centralized control panel for issuing licenses, monitoring expiration cycles, and managing system credentials securely.</p>
-                    <a href="/admin/login" class="btn btn-outline">Admin Login</a>
+                    <div class="card-icon">🔒</div>
+                    <h3>Centralized Fleet Control</h3>
+                    <p>Monitor active licenses, manage device slots, and secure connection statuses from a unified command center.</p>
+                </div>
+                <div class="card">
+                    <div class="card-icon">🛡️</div>
+                    <h3>Automated Endpoint Protection</h3>
+                    <p>Seamlessly link devices to secure licenses with a single click, keeping your organization safe 24/7/365.</p>
                 </div>
             </div>
         </div>
-        <div class="footer">&copy; 2026 ISS Security Systems. All Rights Reserved. Enterprise Cloud Backend Active.</div>
+
+        <div class="footer">
+            <div>&copy; 2026 ISS Security Systems. All Rights Reserved.</div>
+            <div style="display: flex; gap: 20px;">
+                <a href="/client-login" style="color: var(--text-muted); text-decoration: none;">Client Portal</a>
+                <a href="/admin/login" style="color: var(--text-muted); text-decoration: none;">Admin Access</a>
+            </div>
+        </div>
     </body>
     </html>
     """
@@ -163,9 +237,9 @@ def admin_login():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Admin Login - ISS Security</title>
         <style>
-            body {{ font-family: 'Segoe UI', Tahoma, sans-serif; background: #090d16; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: #f8fafc; }}
+            body {{ font-family: 'Segoe UI', Tahoma, sans-serif; background: #060913; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: #f8fafc; }}
             .card {{ background: #111827; padding: 35px; border-radius: 12px; width: 100%; max-width: 380px; border: 1px solid #1e293b; box-shadow: 0 15px 30px rgba(0,0,0,0.5); }}
-            input {{ width: 100%; padding: 12px; margin: 8px 0 20px 0; box-sizing: border-box; background: #090d16; border: 1px solid #334155; border-radius: 6px; color: white; font-size: 14px; }}
+            input {{ width: 100%; padding: 12px; margin: 8px 0 20px 0; box-sizing: border-box; background: #060913; border: 1px solid #334155; border-radius: 6px; color: white; font-size: 14px; }}
             input:focus {{ outline: none; border-color: #0ea5e9; }}
             button {{ background: #0ea5e9; color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; }}
             button:hover {{ background: #0284c7; }}
@@ -194,7 +268,7 @@ def admin_logout():
     session.pop('is_admin', None)
     return redirect(url_for('admin_login'))
 
-# --- Professional Admin Dashboard ---
+# --- Professional Admin Dashboard with Delete/Block Feature ---
 @app.route("/admin", methods=["GET", "POST"])
 def admin_panel():
     if not session.get('is_admin'):
@@ -210,6 +284,13 @@ def admin_panel():
                 ADMIN_CONFIG["username"] = new_user
                 ADMIN_CONFIG["password"] = new_pwd
                 success_msg = "✅ Admin security credentials updated successfully!"
+        elif action == "delete_license":
+            target_key = request.form.get("license_key")
+            licenses = load_licenses()
+            if target_key in licenses:
+                del licenses[target_key]
+                save_all_licenses(licenses)
+                success_msg = f"🗑️ License ID '{target_key}' has been successfully deleted & blocked!"
 
     licenses = load_licenses()
     table_rows = ""
@@ -225,6 +306,13 @@ def admin_panel():
             <td><code style="color: #cbd5e1;">{v['client_user']} / {v['client_pwd']}</code></td>
             <td><b>{len(v['pcs'])} / {v['max_devices']}</b></td>
             <td><code style="color: #94a3b8; font-size: 12px;">{connected_list}</code></td>
+            <td>
+                <form method="POST" onsubmit="return confirm('Are you sure you want to delete and block this license?');" style="margin:0;">
+                    <input type="hidden" name="action" value="delete_license">
+                    <input type="hidden" name="license_key" value="{k}">
+                    <button type="submit" style="background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; width: auto;">Delete / Block</button>
+                </form>
+            </td>
         </tr>
         """
 
@@ -238,27 +326,27 @@ def admin_panel():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>ISS Enterprise Admin Dashboard</title>
         <style>
-            body {{ font-family: 'Segoe UI', Tahoma, sans-serif; background: #090d16; color: #f8fafc; margin: 0; padding: 20px; }}
+            body {{ font-family: 'Segoe UI', Tahoma, sans-serif; background: #060913; color: #f8fafc; margin: 0; padding: 20px; }}
             .navbar {{ display: flex; justify-content: space-between; align-items: center; background: #111827; padding: 15px 25px; border-radius: 10px; border: 1px solid #1e293b; margin-bottom: 25px; }}
             .navbar h2 {{ margin: 0; font-size: 20px; color: #38bdf8; display: flex; align-items: center; gap: 10px; }}
             .logout-btn {{ background: #ef4444; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: bold; transition: background 0.2s; }}
             .logout-btn:hover {{ background: #dc2626; }}
             .container {{ display: grid; grid-template-columns: 350px 1fr; gap: 20px; }}
-            @media(max-width: 950px) {{ .container {{ grid-template-columns: 1fr; }} }}
+            @media(max-width: 1050px) {{ .container {{ grid-template-columns: 1fr; }} }}
             .box {{ background: #111827; padding: 25px; border-radius: 12px; border: 1px solid #1e293b; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }}
             .box h3 {{ margin-top: 0; font-size: 18px; color: #f8fafc; border-bottom: 1px solid #1e293b; padding-bottom: 10px; }}
-            input, select {{ width: 100%; padding: 10px; margin: 6px 0 15px 0; box-sizing: border-box; background: #090d16; border: 1px solid #334155; border-radius: 6px; color: white; font-size: 14px; }}
+            input, select {{ width: 100%; padding: 10px; margin: 6px 0 15px 0; box-sizing: border-box; background: #060913; border: 1px solid #334155; border-radius: 6px; color: white; font-size: 14px; }}
             input:focus, select:focus {{ outline: none; border-color: #0ea5e9; }}
             button {{ background: #0ea5e9; color: white; padding: 12px; border: none; width: 100%; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; transition: background 0.2s; }}
             button:hover {{ background: #0284c7; }}
             .table-container {{ overflow-x: auto; }}
-            table {{ width: 100%; border-collapse: collapse; margin-top: 10px; min-width: 700px; }}
+            table {{ width: 100%; border-collapse: collapse; margin-top: 10px; min-width: 800px; }}
             th, td {{ border: 1px solid #1e293b; padding: 12px; text-align: left; font-size: 13px; }}
             th {{ background-color: #1a2234; color: #38bdf8; font-weight: 600; }}
             tr:hover {{ background: rgba(255,255,255,0.01); }}
             .side-by-side {{ display: flex; gap: 10px; }}
             .side-by-side input {{ flex: 1.3; }}
-            .side-by-side select {{ flex: 1.2; background: #090d16; color: #38bdf8; font-weight: bold; }}
+            .side-by-side select {{ flex: 1.2; background: #060913; color: #38bdf8; font-weight: bold; }}
             .label {{ font-size: 12px; font-weight: 600; color: #94a3b8; display: block; }}
         </style>
     </head>
@@ -331,8 +419,9 @@ def admin_panel():
                             <th>Client Login</th>
                             <th>Devices</th>
                             <th>Connected IPs</th>
+                            <th>Action</th>
                         </tr>
-                        {table_rows if table_rows else "<tr><td colspan='8' style='text-align:center; color: #94a3b8; padding: 30px;'>No active licenses found in system.</td></tr>"}
+                        {table_rows if table_rows else "<tr><td colspan='9' style='text-align:center; color: #94a3b8; padding: 30px;'>No active licenses found in system.</td></tr>"}
                     </table>
                 </div>
             </div>
@@ -383,7 +472,7 @@ def add_client():
     save_all_licenses(licenses)
 
     return f"""
-    <body style="font-family: 'Segoe UI'; background: #090d16; color: #f8fafc; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
+    <body style="font-family: 'Segoe UI'; background: #060913; color: #f8fafc; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
         <div style="background: #111827; padding: 35px; border-radius: 12px; border: 1px solid #1e293b; text-align: center; max-width: 400px;">
             <h3 style="color: #34d399; margin-top: 0;">License Generated Successfully!</h3>
             <p style="color: #94a3b8; font-size: 14px;">Key: <code style="color: #38bdf8;">{license_key}</code></p>
@@ -411,7 +500,7 @@ def client_login():
             else:
                 error_msg = "Invalid Username or Password for this License ID!"
         else:
-            error_msg = "Invalid or Unrecognized License ID!"
+            error_msg = "Invalid, Blocked or Unrecognized License ID!"
 
     return render_template_string(f"""
     <!DOCTYPE html>
@@ -421,9 +510,9 @@ def client_login():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Client Portal Login - ISS Security</title>
         <style>
-            body {{ font-family: 'Segoe UI', Tahoma, sans-serif; background: #090d16; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: #f8fafc; padding: 15px; box-sizing: border-box; }}
+            body {{ font-family: 'Segoe UI', Tahoma, sans-serif; background: #060913; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: #f8fafc; padding: 15px; box-sizing: border-box; }}
             .card {{ background: #111827; padding: 35px; border-radius: 12px; width: 100%; max-width: 380px; border: 1px solid #1e293b; box-shadow: 0 15px 30px rgba(0,0,0,0.5); }}
-            input {{ width: 100%; padding: 12px; margin: 6px 0 15px 0; box-sizing: border-box; background: #090d16; border: 1px solid #334155; border-radius: 6px; color: white; font-size: 14px; }}
+            input {{ width: 100%; padding: 12px; margin: 6px 0 15px 0; box-sizing: border-box; background: #060913; border: 1px solid #334155; border-radius: 6px; color: white; font-size: 14px; }}
             input:focus {{ outline: none; border-color: #0ea5e9; }}
             button {{ background: #0ea5e9; color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; }}
             button:hover {{ background: #0284c7; }}
@@ -500,7 +589,7 @@ def client_dashboard():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>ISS Client Security Dashboard</title>
         <style>
-            body {{ font-family: 'Segoe UI', Tahoma, sans-serif; background: #090d16; color: #f8fafc; margin: 0; padding: 20px; }}
+            body {{ font-family: 'Segoe UI', Tahoma, sans-serif; background: #060913; color: #f8fafc; margin: 0; padding: 20px; }}
             .navbar {{ display: flex; justify-content: space-between; align-items: center; background: #111827; padding: 15px 25px; border-radius: 10px; border: 1px solid #1e293b; margin-bottom: 25px; max-width: 650px; margin-left: auto; margin-right: auto; }}
             .navbar h2 {{ margin: 0; font-size: 18px; color: #38bdf8; }}
             .card {{ background: #111827; max-width: 650px; margin: 0 auto; padding: 30px; border-radius: 12px; border: 1px solid #1e293b; box-shadow: 0 10px 25px rgba(0,0,0,0.4); box-sizing: border-box; }}
@@ -511,7 +600,7 @@ def client_dashboard():
             .setup-btn:hover {{ background: #059669; }}
             .logout {{ color: #ef4444; text-decoration: none; font-size: 13px; font-weight: bold; }}
             .logout:hover {{ text-decoration: underline; }}
-            input {{ width: 100%; padding: 10px; margin: 6px 0 12px 0; box-sizing: border-box; background: #090d16; border: 1px solid #334155; border-radius: 6px; color: white; font-size: 14px; }}
+            input {{ width: 100%; padding: 10px; margin: 6px 0 12px 0; box-sizing: border-box; background: #060913; border: 1px solid #334155; border-radius: 6px; color: white; font-size: 14px; }}
             input:focus {{ outline: none; border-color: #0ea5e9; }}
         </style>
     </head>
@@ -531,8 +620,7 @@ def client_dashboard():
             {f'<div style="background: rgba(16,185,129,0.1); border: 1px solid #10b981; color: #34d399; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; font-size: 13px;">{success_msg}</div>' if success_msg else ''}
             {f'<div style="background: rgba(30,41,59,0.8); border: 1px solid #334155; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; font-size: 13px; color: #38bdf8;">{setup_message}</div>' if setup_message else ''}
 
-            <!-- Change Credentials Box -->
-            <div style="background: #090d16; padding: 20px; border-radius: 10px; margin: 20px 0; border: 1px solid #1e293b;">
+            <div style="background: #060913; padding: 20px; border-radius: 10px; margin: 20px 0; border: 1px solid #1e293b;">
                 <h4 style="margin-top: 0; color: #f8fafc; font-size: 15px; border-bottom: 1px solid #1e293b; padding-bottom: 8px;">Modify Security Credentials</h4>
                 <form method="POST">
                     <input type="hidden" name="action" value="update_my_credentials">
@@ -585,7 +673,7 @@ def scan_file():
 
     licenses = load_licenses()
     if license_key not in licenses:
-        return jsonify({"status": "error", "message": "Invalid License ID!"}), 403
+        return jsonify({"status": "error", "message": "Invalid or Blocked License ID!"}), 403
 
     client_info = licenses[license_key]
     if datetime.now().date() > datetime.strptime(client_info["expiry"], "%Y-%m-%d").date():
