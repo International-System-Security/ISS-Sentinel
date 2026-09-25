@@ -3,18 +3,17 @@ import os
 from flask import Flask, redirect, render_template_string, request, session, url_for
 
 app = Flask(__name__)
-app.secret_key = "iss_enterprise_security_secret_key_v4"
+app.secret_key = "iss_enterprise_security_secret_key_v5"
 
 USER_FILE = "users.txt"
 POST_FILE = "posts.txt"
 INQUIRY_FILE = "inquiries.txt"
 TICKET_FILE = "tickets.txt"
 LICENSE_FILE = "licenses.txt"
-SYSTEM_CONFIG_FILE = "system_config.txt"
 
 MASTER_ADMIN_DOMAIN = "iss.com"
 
-# Exact SVG Verified Badge matching the user's provided image
+# Exact Verified Badge SVG matching the provided image style[span_2](start_span)[span_2](end_span)[span_3](start_span)[span_3](end_span)
 VERIFIED_BADGE_SVG = '''
 <svg width="16" height="16" viewBox="0 0 24 24" fill="#0ea5e9" style="vertical-align: middle; margin-left: 4px;" title="Verified Account">
     <path d="M12 2L14.34 3.73L17.25 3.5L18.77 6.04L21.5 7.15L21.57 10.12L23.75 12.12L22.12 14.75L22.5 17.75L19.75 19L18.38 21.62L15.5 21.37L13.38 23.25L10.62 22.25L8.12 23.37L6.38 21.12L3.62 20.37L3.12 17.5L0.87 15.62L2.12 12.87L0.87 10.12L3.12 8.25L3.87 5.5L6.62 5.12L8.5 2.87L11.25 3.87L12 2Z" fill="#0ea5e9"/>
@@ -37,6 +36,7 @@ def load_users():
                         "pic": parts[4].strip(),
                         "verified": parts[5].strip() == "True"
                     }
+    # Default Admin with admin/admin credentials
     if "admin" not in users:
         users["admin"] = {"email": f"admin@{MASTER_ADMIN_DOMAIN}", "password": "admin", "role": "Admin", "pic": "https://i.imgur.com/6VBx3io.png", "verified": True}
     return users
@@ -99,14 +99,25 @@ def load_licenses():
         with open(LICENSE_FILE, "r") as f:
             for line in f:
                 parts = line.strip().split(",")
-                if len(parts) >= 6:
-                    licenses[parts[0].strip()] = {"name": parts[1].strip(), "org": parts[2].strip(), "expiry": parts[3].strip(), "max": parts[4].strip(), "plan": parts[5].strip()}
+                # Format: Key, Name, Org, Expiry, Max, Plan, ClientUser, ClientPwd
+                if len(parts) >= 8:
+                    licenses[parts[0].strip()] = {
+                        "name": parts[1].strip(), "org": parts[2].strip(), "expiry": parts[3].strip(),
+                        "max": parts[4].strip(), "plan": parts[5].strip(),
+                        "client_user": parts[6].strip(), "client_pwd": parts[7].strip()
+                    }
+                elif len(parts) >= 6:
+                    licenses[parts[0].strip()] = {
+                        "name": parts[1].strip(), "org": parts[2].strip(), "expiry": parts[3].strip(),
+                        "max": parts[4].strip(), "plan": parts[5].strip(),
+                        "client_user": "admin", "client_pwd": "admin"
+                    }
     return licenses
 
 def save_licenses(lic_dict):
     with open(LICENSE_FILE, "w") as f:
         for k, v in lic_dict.items():
-            f.write(f"{k},{v['name']},{v['org']},{v['expiry']},{v['max']},{v['plan']}\n")
+            f.write(f"{k},{v['name']},{v['org']},{v['expiry']},{v['max']},{v['plan']},{v['client_user']},{v['client_pwd']}\n")
 
 # --- 1. HOME PANEL & ISS SOCIAL & CONTACT US ---
 @app.route("/", methods=["GET", "POST"])
@@ -143,7 +154,7 @@ def home():
     <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>ISS Cloud Security & Social Hub</title>
+        <title>ISS Cloud Security & Social Platform</title>
         <style>
             :root {{
                 --bg-primary: #060913; --bg-secondary: #0b1120; --bg-card: #111827;
@@ -169,18 +180,16 @@ def home():
         <nav class="navbar">
             <a href="/" class="logo">🛡️ ISS <span>PLATFORM</span></a>
             <div class="nav-links">
-                <a href="/">Home</a>
                 <a href="#social">ISS Social</a>
                 <a href="#contact">Contact Us</a>
                 <a href="#tickets">Support Tickets</a>
                 <a href="/my-profile">My Profile</a>
-                {'<a href="/admin" style="color: #38bdf8; font-weight:bold;">Admin Panel</a>' if user_data and user_data['role'] == 'Admin' else ''}
-                {'<a href="/client-login">Client Portal</a>' if not user_data or user_data['role'] != 'Admin' else ''}
+                <a href="/admin" style="color: #38bdf8; font-weight:bold;">Admin Portal</a>
+                <a href="/client-login">Client Portal</a>
             </div>
         </nav>
 
         <div class="container">
-            <!-- Hero Section -->
             <div class="card" style="text-align: center; padding: 50px 20px;">
                 <h1>Next-Gen Cloud Security & Social Hub</h1>
                 <p style="color: var(--text-muted); max-width: 650px; margin: 0 auto 20px auto;">Connect with professionals, manage security licenses, and communicate securely through private tickets.</p>
@@ -192,7 +201,6 @@ def home():
                 <h3>🌐 ISS Social Feed</h3>
                 <p style="font-size: 13px; color: var(--text-muted);">Share your thoughts, updates, and images with the community.</p>
                 
-                <!-- Search Users Bar -->
                 <form method="GET" action="/" style="margin-bottom: 20px; display: flex; gap: 10px;">
                     <input type="text" name="search" placeholder="Search user by username..." value="{search_query}" style="margin:0;">
                     <button type="submit" style="width: auto;">Search</button>
@@ -209,7 +217,6 @@ def home():
                 </div>
                 ''' if current_user else '<p style="font-size:13px; color:#94a3b8;">Please <a href="/my-profile" style="color:#0ea5e9;">login</a> to create posts.</p>'}
 
-                <!-- Posts List -->
                 <div>
                     {"".join([f'''
                     <div style="background:var(--bg-secondary); padding:15px; border-radius:8px; margin-bottom:15px; border:1px solid var(--border-color);">
@@ -223,7 +230,6 @@ def home():
                     ''' for p in posts]) if posts else '<p style="color:var(--text-muted);">No posts shared yet.</p>'}
                 </div>
 
-                <!-- User Directory -->
                 <h4 style="margin-top:30px;">Community Directory</h4>
                 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">
                     {"".join([f'''
@@ -238,7 +244,7 @@ def home():
                 </div>
             </div>
 
-            <!-- Contact Us Section -->
+            <!-- Contact Us & Ticket Section -->
             <div class="card" id="contact">
                 <h3>📞 Contact Us & Service Application</h3>
                 <p style="font-size: 13px; color: var(--text-muted);">Apply to get our enterprise security features and license solutions.</p>
@@ -252,9 +258,8 @@ def home():
                 </form>
             </div>
 
-            <!-- Ticket / Messenger Support Section -->
             <div class="card" id="tickets">
-                <h3>💬 Private Support Tickets</h3>
+                <h3>💬 Support Tickets (Messenger)</h3>
                 <p style="font-size: 13px; color: var(--text-muted);">Have questions or need assistance? Open a support ticket to chat privately with admins.</p>
                 {f'<a href="/ticket-chat" style="display:inline-block; background:var(--accent-blue); color:white; padding:10px 20px; border-radius:6px; text-decoration:none; font-weight:bold; margin-top:10px;">Open My Support Chat</a>' if current_user else '<p style="font-size:13px; color:#fca5a5;">Please login via My Profile to access support tickets.</p>'}
             </div>
@@ -263,7 +268,7 @@ def home():
     </html>
     """)
 
-# --- MY PROFILE ---
+# --- MY PROFILE (Login / Register with "Who are you?" Role Choice) ---
 @app.route("/my-profile", methods=["GET", "POST"])
 def my_profile():
     users = load_users()
@@ -276,13 +281,13 @@ def my_profile():
             uname = request.form.get("username").strip()
             email = request.form.get("email").strip()
             pwd = request.form.get("password").strip()
-            role_type = request.form.get("role_type")
+            who_are_you = request.form.get("who_are_you") # "User" or "Admin"
             pic = request.form.get("pic").strip() or "https://i.imgur.com/6VBx3io.png"
 
             if uname in users:
                 error = "Username already exists!"
             else:
-                role = "Admin" if role_type == "Admin" or MASTER_ADMIN_DOMAIN in email else "User"
+                role = "Admin" if who_are_you == "Admin" or MASTER_ADMIN_DOMAIN in email else "User"
                 is_verified = True if role == "Admin" else False
                 users[uname] = {"email": email, "password": pwd, "role": role, "pic": pic, "verified": is_verified}
                 save_all_users(users)
@@ -391,12 +396,13 @@ def my_profile():
 
             <div id="login-form">
                 <h3>Account Login</h3>
+                <p style="font-size:12px; color:var(--text-muted);">Default Admin Login: <b>admin / admin</b></p>
                 <form method="POST">
                     <input type="hidden" name="action" value="login">
                     <label style="font-size:12px; color:var(--text-muted);">Username</label>
-                    <input type="text" name="username" required>
+                    <input type="text" name="username" value="admin" required>
                     <label style="font-size:12px; color:var(--text-muted);">Password</label>
-                    <input type="password" name="password" required>
+                    <input type="password" name="password" value="admin" required>
                     <button type="submit">Login to Profile</button>
                 </form>
             </div>
@@ -405,10 +411,10 @@ def my_profile():
                 <h3>Create New Account</h3>
                 <form method="POST">
                     <input type="hidden" name="action" value="register">
-                    <label style="font-size:12px; color:var(--text-muted);">Who are you? (User or Admin)</label>
-                    <select name="role_type">
-                        <option value="User">Regular User</option>
-                        <option value="Admin">Admin (Domain iss.com)</option>
+                    <label style="font-size:12px; color:var(--text-muted);">Who are you?</label>
+                    <select name="who_are_you">
+                        <option value="User">User</option>
+                        <option value="Admin">Admin</option>
                     </select>
                     <label style="font-size:12px; color:var(--text-muted);">Username</label>
                     <input type="text" name="username" required>
@@ -454,8 +460,10 @@ def admin_panel():
             l_key = request.form.get("l_key")
             l_name = request.form.get("l_name")
             l_org = request.form.get("l_org")
+            l_user = request.form.get("l_user", "admin")
+            l_pwd = request.form.get("l_pwd", "admin")
             licenses = load_licenses()
-            licenses[l_key] = {"name": l_name, "org": l_org, "expiry": "2027-01-01", "max": "3", "plan": "Enterprise"}
+            licenses[l_key] = {"name": l_name, "org": l_org, "expiry": "2027-01-01", "max": "3", "plan": "Enterprise", "client_user": l_user, "client_pwd": l_pwd}
             save_licenses(licenses)
             msg = f"✅ License '{l_key}' created successfully!"
 
@@ -481,7 +489,7 @@ def admin_panel():
             table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
             th, td {{ border: 1px solid #1e293b; padding: 12px; text-align: left; font-size: 13px; }}
             th {{ background: #1a2234; color: #38bdf8; }}
-            input, button {{ padding: 10px; margin: 5px 0; background: #060913; border: 1px solid #334155; color: white; border-radius: 6px; }}
+            input, button {{ padding: 10px; margin: 5px 0; background: #060913; border: 1px solid #334155; color: white; border-radius: 6px; box-sizing: border-box; }}
             button {{ background: #0ea5e9; font-weight: bold; cursor: pointer; border: none; }}
         </style>
     </head>
@@ -500,16 +508,18 @@ def admin_panel():
 
         <div class="box">
             <h3>🔑 License Management (Issue & Delete/Block)</h3>
-            <form method="POST" style="display:flex; gap:10px; margin-bottom:15px;">
+            <form method="POST" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px; margin-bottom:15px;">
                 <input type="hidden" name="action" value="add_license">
-                <input type="text" name="l_key" placeholder="License Key (e.g. iss-123)" required style="flex:1;">
-                <input type="text" name="l_name" placeholder="Client Name" required style="flex:1;">
-                <input type="text" name="l_org" placeholder="Organization" required style="flex:1;">
-                <button type="submit">Create License</button>
+                <input type="text" name="l_key" placeholder="License Key (e.g. iss-123)" required>
+                <input type="text" name="l_name" placeholder="Client Name" required>
+                <input type="text" name="l_org" placeholder="Organization" required>
+                <input type="text" name="l_user" placeholder="Client User (def: admin)" value="admin" required>
+                <input type="text" name="l_pwd" placeholder="Client Pass (def: admin)" value="admin" required>
+                <button type="submit" style="grid-column: 1 / -1;">Create License</button>
             </form>
             <table>
-                <tr><th>Key</th><th>Client</th><th>Org</th><th>Expiry</th><th>Action</th></tr>
-                {"".join([f'<tr><td><code>{k}</code></td><td>{v["name"]}</td><td>{v["org"]}</td><td>{v["expiry"]}</td><td><form method="POST" style="margin:0;"><input type="hidden" name="action" value="delete_license"><input type="hidden" name="lic_key" value="{k}"><button type="submit" style="background:#ef4444; padding:4px 8px; font-size:11px;">Delete / Block</button></form></td></tr>' for k, v in licenses.items()]) if licenses else '<tr><td colspan="5" style="text-align:center; color:#94a3b8;">No licenses found.</td></tr>'}
+                <tr><th>Key</th><th>Client</th><th>Org</th><th>Client Login Credentials</th><th>Expiry</th><th>Action</th></tr>
+                {"".join([f'<tr><td><code>{k}</code></td><td>{v["name"]}</td><td>{v["org"]}</td><td><code>{v.get("client_user","admin")} / {v.get("client_pwd","admin")}</code></td><td>{v["expiry"]}</td><td><form method="POST" style="margin:0;"><input type="hidden" name="action" value="delete_license"><input type="hidden" name="lic_key" value="{k}"><button type="submit" style="background:#ef4444; padding:4px 8px; font-size:11px;">Delete / Block</button></form></td></tr>' for k, v in licenses.items()]) if licenses else '<tr><td colspan="6" style="text-align:center; color:#94a3b8;">No licenses found.</td></tr>'}
             </table>
         </div>
 
@@ -538,7 +548,7 @@ def admin_tickets():
         t_id = request.form.get("tid")
         reply_text = request.form.get("reply")
         if t_id and reply_text:
-            save_ticket_msg(t_id, tickets.get(t_id, {}).get("user", "client"), f"Admin ({current_user})", reply_text)
+            save_ticket_msg(t_id, tickets.get(t_id, {}).get("user", "client"), f"Admin ({current_user} 👑✔)", reply_text)
             return redirect(url_for('admin_tickets', tid=t_id))
 
     ticket_list_html = "".join([f'<a href="/admin/tickets?tid={tid}" style="display:block; padding:10px; margin:6px 0; background:#1e293b; color:#38bdf8; text-decoration:none; border-radius:6px; font-size:13px;">Ticket: {tid} (User: {data["user"]})</a>' for tid, data in tickets.items()])
@@ -577,16 +587,24 @@ def admin_tickets():
     </html>
     """)
 
-# --- 3. CLIENT PANEL ---
+# --- 3. CLIENT PANEL (With License ID, Username & Password) ---
 @app.route("/client-login", methods=["GET", "POST"])
 def client_login():
     error_msg = ""
     if request.method == "POST":
         lic_key = request.form.get("lic_key", "").strip()
+        c_user = request.form.get("c_user", "").strip()
+        c_pwd = request.form.get("c_pwd", "").strip()
+        
         licenses = load_licenses()
         if lic_key in licenses:
-            session["client_license"] = lic_key
-            return redirect(url_for("client_dashboard"))
+            stored_user = licenses[lic_key].get("client_user", "admin")
+            stored_pwd = licenses[lic_key].get("client_pwd", "admin")
+            if c_user == stored_user and c_pwd == stored_pwd:
+                session["client_license"] = lic_key
+                return redirect(url_for("client_dashboard"))
+            else:
+                error_msg = "Incorrect Client Username or Password for this License ID!"
         else:
             error_msg = "Invalid or Blocked License ID!"
 
@@ -597,10 +615,15 @@ def client_login():
     <body style="font-family:'Segoe UI'; background:#060913; color:white; display:flex; justify-content:center; align-items:center; height:100vh; margin:0;">
         <div style="background:#111827; padding:35px; border-radius:12px; width:360px; border:1px solid #1e293b;">
             <h2>Client Portal Login</h2>
-            <p style="font-size:13px; color:#94a3b8;">Enter your assigned License ID to access portal.</p>
+            <p style="font-size:13px; color:#94a3b8;">Enter License ID, Username & Password (Default: admin/admin).</p>
             {f'<div style="color:#fca5a5; font-size:13px; margin-bottom:10px;">{error_msg}</div>' if error_msg else ''}
             <form method="POST">
-                <input type="text" name="lic_key" placeholder="Enter License ID" required style="width:100%; padding:12px; margin:8px 0 16px 0; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
+                <label style="font-size:12px; color:#94a3b8;">License ID</label>
+                <input type="text" name="lic_key" placeholder="Enter License ID" required style="width:100%; padding:10px; margin:5px 0 12px 0; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
+                <label style="font-size:12px; color:#94a3b8;">Username</label>
+                <input type="text" name="c_user" value="admin" required style="width:100%; padding:10px; margin:5px 0 12px 0; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
+                <label style="font-size:12px; color:#94a3b8;">Password</label>
+                <input type="password" name="c_pwd" value="admin" required style="width:100%; padding:10px; margin:5px 0 15px 0; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
                 <button type="submit" style="width:100%; padding:12px; background:#0ea5e9; border:none; color:white; font-weight:bold; border-radius:6px; cursor:pointer;">Login Client Portal</button>
             </form>
             <br><a href="/" style="color:#38bdf8; font-size:13px; text-decoration:none;">&larr; Return to Home</a>
