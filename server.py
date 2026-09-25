@@ -45,7 +45,7 @@ def home():
     <p>Admin Dashboard: <a href='/admin?key=my_super_secret_admin_key_123'>/admin</a></p>
     """
 
-# ১. অ্যাডমিন ড্যাশবোর্ড (Calendar with helper plan hints included)
+# ১. অ্যাডমিন ড্যাশবোর্ড (Clean Plans & Calendar with Plan Label)
 @app.route("/admin", methods=["GET"])
 def admin_panel():
     key = request.args.get("key")
@@ -86,7 +86,8 @@ def admin_panel():
             table {{ width: 100%%; border-collapse: collapse; margin-top: 10px; min-width: 600px; }}
             th, td {{ border: 1px solid #e2e8f0; padding: 10px; text-align: left; font-size: 13px; }}
             th {{ background-color: #0f172a; color: white; }}
-            .hint-box {{ background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px 10px; border-radius: 4px; font-size: 12px; color: #475569; margin-bottom: 12px; }}
+            .calendar-label {{ font-size: 13px; font-weight: bold; color: #1e293b; display: flex; justify-content: space-between; align-items: center; margin-top: 5px; }}
+            .calendar-badge {{ background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-size: 11px; }}
         </style>
     </head>
     <body>
@@ -103,27 +104,20 @@ def admin_panel():
                     <label>License ID:</label>
                     <input type="text" name="license" placeholder="e.g. iss-1111-2026" required>
                     
-                    <label>Select Main Plan Duration:</label>
+                    <label>Select Plan Type:</label>
                     <select name="plan_choice">
-                        <option value="Basic-Monthly">Basic Plan (1 Device - 1 Month)</option>
-                        <option value="Basic-2Months">Basic Plan (1 Device - 2 Months)</option>
-                        <option value="Basic-3Months">Basic Plan (1 Device - 3 Months)</option>
-                        <option value="Standard-Monthly">Standard Plan (3 Devices - 1 Month)</option>
-                        <option value="Standard-2Months">Standard Plan (3 Devices - 2 Months)</option>
-                        <option value="Standard-3Months">Standard Plan (3 Devices - 3 Months)</option>
-                        <option value="Enterprise-Monthly">Enterprise Plan (5 Devices - 1 Month)</option>
-                        <option value="Enterprise-2Months">Enterprise Plan (5 Devices - 2 Months)</option>
-                        <option value="Enterprise-3Months">Enterprise Plan (5 Devices - 3 Months)</option>
-                        <option value="Custom-Duration">Custom Duration (Use Calendar Below)</option>
+                        <option value="Basic-Monthly">Basic Plan (1 Device - Monthly)</option>
+                        <option value="Standard-Monthly">Standard Plan (3 Devices - Monthly)</option>
+                        <option value="Enterprise-Monthly">Enterprise Plan (5 Devices - Monthly)</option>
+                        <option value="Custom-Duration">Custom Duration (Flexible Days/Months)</option>
                     </select>
 
-                    <label>Custom Expiry Date (Calendar):</label>
-                    <input type="date" name="custom_expiry" value="{default_expiry}">
-                    
-                    <div class="hint-box">
-                        <b>💡 ট্রায়াল বা শর্ট-টার্ম প্ল্যান গাইড:</b><br>
-                        ১ বা ২ দিনের ট্রায়াল দিতে চাইলে ক্যালেন্ডার থেকে নির্দিষ্ট তারিখ সিলেক্ট করুন অথবা উপরে Custom সিলেক্ট করে মেয়াদ দিন।
+                    <div class="calendar-label">
+                        <span>Custom Expiry Date (Calendar):</span>
+                        <span class="calendar-badge">নির্দিষ্ট মেয়াদ সিলেক্ট করুন</span>
                     </div>
+                    <input type="date" name="custom_expiry" value="{default_expiry}">
+                    <small style="color: #64748b; display: block; margin-top: -6px; margin-bottom: 12px;">(ক্লায়েন্ট যদি ৩ মাস, ১০ দিন বা পছন্দমতো মেয়াদের নেয়, তবে ক্যালেন্ডার থেকে ঠিক করে দিন)</small>
 
                     <button type="submit">Create License ID</button>
                 </form>
@@ -167,17 +161,10 @@ def add_client():
     elif "Enterprise" in plan_choice:
         max_devices = 5
 
-    # মেয়াদ হিসাব করার লজিক
-    if plan_choice == "Custom-Duration" and custom_expiry:
-        expiry_date = custom_expiry
-    elif "2Months" in plan_choice:
-        expiry_date = (datetime.now() + timedelta(days=60)).strftime("%Y-%m-%d")
-    elif "3Months" in plan_choice:
-        expiry_date = (datetime.now() + timedelta(days=90)).strftime("%Y-%m-%d")
-    else:
-        # যদি ড্রপডাউন থেকে অন্য কিছু বা কাস্টম ডেট দেওয়া হয়
-        expiry_date = custom_expiry if custom_expiry else (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+    # ক্যালেন্ডার থেকে সিলেক্ট করা নির্দিষ্ট এক্সপায়ারি ডেট সরাসরি সংরক্ষণ হবে
+    expiry_date = custom_expiry if custom_expiry else (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
 
+    # যদি ইউজার Custom সিলেক্ট না করে স্ট্যান্ডার্ড প্ল্যান দেয়, তবুও সুবিধার জন্য সেটির নাম প্ল্যান টাইপে থাকবে
     licenses = load_licenses()
     licenses[license_key] = {
         "name": client_name,
