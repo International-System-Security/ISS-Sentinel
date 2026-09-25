@@ -7,7 +7,7 @@ app = Flask(__name__)
 LICENSE_FILE = "licenses.txt"
 ADMIN_SECRET_KEY = "my_super_secret_admin_key_123"
 
-# প্ল্যান ফিচার ও বিবরণ
+# সাবস্ক্রিপশন প্ল্যান এবং ফিচারসমূহ
 PLAN_FEATURES = {
     "Basic": {
         "max_devices": 1,
@@ -75,7 +75,8 @@ def save_all_licenses(licenses_dict):
 def home():
   return """
     <h2>ISS Cloud Security Enterprise Backend is Active!</h2>
-    <p>Use <a href='/client-login'>Client Portal</a> to check your subscription and security status.</p>
+    <p>Client Portal & Auto-Setup: <a href='/client-login'>/client-login</a></p>
+    <p>Admin Dashboard: <a href='/admin?key=my_super_secret_admin_key_123'>/admin</a></p>
     """
 
 
@@ -126,14 +127,14 @@ def admin_panel():
         <h2>ISS Cloud Security - Admin Dashboard</h2>
         <div class="container">
             <div class="box">
-                <h3>Assign Plan & Client</h3>
+                <h3>Create Client License ID</h3>
                 <form action="/add-client" method="POST">
                     <input type="hidden" name="key" value="{ADMIN_SECRET_KEY}">
                     <label>Client Name:</label>
                     <input type="text" name="name" placeholder="e.g. Rahim Khan" required>
                     <label>Organization Name:</label>
                     <input type="text" name="org" placeholder="e.g. ABC Tech Ltd" required>
-                    <label>License Key:</label>
+                    <label>License ID:</label>
                     <input type="text" name="license" placeholder="e.g. iss-1111-2026" required>
                     <label>Select Plan Tier & Cycle:</label>
                     <select name="plan_choice">
@@ -144,14 +145,14 @@ def admin_panel():
                         <option value="Enterprise-Monthly">3. Enterprise Plan 5+ PCs (Monthly - $21.99)</option>
                         <option value="Enterprise-Yearly">3. Enterprise Plan 5+ PCs (Yearly - $219.99)</option>
                     </select>
-                    <button type="submit">Activate Plan</button>
+                    <button type="submit">Create License ID</button>
                 </form>
             </div>
             <div class="table-box">
                 <h3>Active Subscriptions</h3>
                 <table>
                     <tr>
-                        <th>License Key</th>
+                        <th>License ID</th>
                         <th>Client Name</th>
                         <th>Organization</th>
                         <th>Plan Type</th>
@@ -204,12 +205,12 @@ def add_client():
   save_all_licenses(licenses)
 
   return f"""
-    <h3>Success! <b>{plan_choice}</b> activated for <b>{org_name}</b>.</h3>
+    <h3>Success! License ID <b>{license_key}</b> created for <b>{org_name}</b>.</h3>
     <a href="/admin?key={ADMIN_SECRET_KEY}">Back to Dashboard</a>
     """
 
 
-# ২. ক্লায়েন্ট পোর্টাল লগইন পেজ (যেখানে ক্লায়েন্ট তার লাইসেন্স কী দিয়ে তার স্ট্যাটাস ও রিপোর্ট দেখবে)
+# ২. ক্লায়েন্ট পোর্টাল ও অটো-কনফিগারেশন পেজ
 @app.route("/client-login", methods=["GET", "POST"])
 def client_login():
   error_msg = ""
@@ -218,7 +219,6 @@ def client_login():
     licenses = load_licenses()
 
     if license_key in licenses:
-      # সরাসরি ক্লায়েন্ট ড্যাশবোর্ড পেজে রিডাইরেক্ট বা রেন্ডার করা
       v = licenses[license_key]
       base_tier = "Basic"
       if "Standard" in v["plan_type"]:
@@ -237,7 +237,7 @@ def client_login():
             <!DOCTYPE html>
             <html>
             <head>
-                <title>ISS Client Security Portal</title>
+                <title>ISS Client Auto-Setup Portal</title>
                 <style>
                     body {{ font-family: Arial; background: #f8fafc; padding: 30px; color: #1e293b; }}
                     .card {{ background: white; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
@@ -247,13 +247,14 @@ def client_login():
                     .value {{ font-size: 16px; color: #0f172a; margin-top: 3px; }}
                     .status-safe {{ color: #16a34a; font-weight: bold; }}
                     ul {{ margin: 5px 0; padding-left: 20px; font-size: 14px; color: #475569; }}
+                    .setup-box {{ background: #e0f2fe; padding: 15px; border-radius: 6px; margin-top: 15px; border-left: 4px solid #0284c7; }}
                     .back-btn {{ display: inline-block; margin-top: 20px; background: #0284c7; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; font-size: 14px; }}
                 </style>
             </head>
             <body>
                 <div class="card">
-                    <h2>Client Security & Subscription Portal</h2>
-                    <p class="status-safe">● System Status: Fully Protected & Active</p>
+                    <h2>Client Auto-Setup & Security Portal</h2>
+                    <p class="status-safe">● License Status: Active & Auto-Linked</p>
                     
                     <div class="info-group">
                         <div class="label">Organization Name</div>
@@ -271,29 +272,36 @@ def client_login():
                     </div>
 
                     <div class="info-group">
-                        <div class="label">Device Usage (Connected PCs / Max Limit)</div>
+                        <div class="label">Device Usage & Limit</div>
                         <div class="value">{len(v['pcs'])} / {v['max_devices']} PC(s) [<code>{connected_devices}</code>]</div>
                     </div>
 
                     <div class="info-group">
-                        <div class="label">Included Plan Features & Privileges</div>
+                        <div class="label">Included Privileges & Features</div>
                         <ul>{features_html}</ul>
                     </div>
 
-                    <a href="/client-login" class="back-btn">Check Another License</a>
+                    <div class="setup-box">
+                        <strong>Auto-Setup Instructions:</strong><br>
+                        আপনার সফটওয়্যারে শুধু এই লাইসেন্স আইডি (<code>{license_key}</code>) বসিয়ে দিন। সার্ভার স্বয়ংক্রিয়ভাবে আপনার পিসি কনফিগার ও সিংক করে নেবে! কোনো জিপ ফাইল বা এক্সট্রা কনফিগারেশনের প্রয়োজন নেই।
+                    </div>
+
+                    <a href="/client-login" class="back-btn">Logout / Enter Another ID</a>
                 </div>
             </body>
             </html>
             """
       return render_template_string(client_dashboard_html)
     else:
-      error_msg = "Invalid License Key! Please check and try again."
+      error_msg = (
+          "Invalid License ID! Please enter a valid license provided by admin."
+      )
 
   login_page = f"""
     <!DOCTYPE html>
     <html>
     <head>
-        <title>ISS Client Login</title>
+        <title>ISS Client Auto-Setup Login</title>
         <style>
             body {{ font-family: Arial; background: #f1f5f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }}
             .login-card {{ background: white; padding: 30px; border-radius: 8px; width: 350px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }}
@@ -305,12 +313,12 @@ def client_login():
     </head>
     <body>
         <div class="login-card">
-            <h3>Client Portal Login</h3>
-            <p style="font-size: 13px; color: #64748b;">Enter your License Key to view status and report</p>
+            <h3>Client Auto-Setup Portal</h3>
+            <p style="font-size: 13px; color: #64748b;">Enter your License ID for instant setup</p>
             {f'<div class="error">{error_msg}</div>' if error_msg else ''}
             <form method="POST">
-                <input type="text" name="license_key" placeholder="Enter License Key (e.g. iss-1111-2026)" required>
-                <button type="submit">View Security & Plan Report</button>
+                <input type="text" name="license_key" placeholder="Enter License ID (e.g. iss-1111-2026)" required>
+                <button type="submit">Auto-Setup & View Status</button>
             </form>
         </div>
     </body>
@@ -319,7 +327,7 @@ def client_login():
   return render_template_string(login_page)
 
 
-# ৩. স্ক্যান এবং রিপোর্ট ট্র্যাকিং রুট
+# ৩. অটো-কনফিগারেশন এবং স্ক্যান রুট (এজেন্ট সরাসরি লাইসেন্স আইডি দিয়ে সিংক করবে)
 @app.route("/scan", methods=["POST"])
 def scan_file():
   data = request.json or {}
@@ -334,7 +342,7 @@ def scan_file():
     return (
         jsonify({
             "status": "error",
-            "message": "Access Denied: Invalid or Unregistered License Key!",
+            "message": "Access Denied: Invalid or Unregistered License ID!",
         }),
         403,
     )
@@ -374,7 +382,7 @@ def scan_file():
         403,
     )
 
-  # ডিভাইস লিমিট চেক
+  # অটো-ডিভাইস বাইন্ডিং চেক
   if client_pc_id not in connected_pcs:
     if len(connected_pcs) >= max_dev:
       return (
@@ -390,7 +398,6 @@ def scan_file():
     connected_pcs.append(client_pc_id)
     save_all_licenses(licenses)
 
-  # স্ক্যান রেজাল্ট
   if file_hash in KNOWN_THREATS:
     return jsonify({
         "status": "danger",
@@ -403,7 +410,7 @@ def scan_file():
   return jsonify({
       "status": "clean",
       "is_threat": False,
-      "message": f"{filename} is safe and scanned successfully.",
+      "message": f"{filename} is safe and auto-linked successfully.",
       "plan_tier": base_tier,
       "active_features": current_tier_features,
   })
