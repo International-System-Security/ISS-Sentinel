@@ -45,7 +45,7 @@ def home():
     <p>Admin Dashboard: <a href='/admin?key=my_super_secret_admin_key_123'>/admin</a></p>
     """
 
-# ১. অ্যাডমিন ড্যাশবোর্ড (Calendar & Plans Included)
+# ১. অ্যাডমিন ড্যাশবোর্ড (2-Month, 3-Month & Calendar Included)
 @app.route("/admin", methods=["GET"])
 def admin_panel():
     key = request.args.get("key")
@@ -68,7 +68,6 @@ def admin_panel():
         </tr>
         """
 
-    # ডিফল্টভাবে আজকের তারিখ থেকে ৩০ দিন পরের তারিখ ক্যালেন্ডারে দেখানোর জন্য
     default_expiry = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
 
     html_page = f"""
@@ -103,17 +102,23 @@ def admin_panel():
                     <label>License ID:</label>
                     <input type="text" name="license" placeholder="e.g. iss-1111-2026" required>
                     
-                    <label>Select Plan Type:</label>
+                    <label>Select Plan Duration:</label>
                     <select name="plan_choice">
-                        <option value="Basic-Monthly">Basic Plan (1 Device - Monthly)</option>
-                        <option value="Standard-Monthly">Standard Plan (3 Devices - Monthly)</option>
-                        <option value="Enterprise-Monthly">Enterprise Plan (5 Devices - Monthly)</option>
-                        <option value="Custom-Duration">Custom Duration (2, 3 months or specific)</option>
+                        <option value="Basic-Monthly">Basic Plan (1 Device - 1 Month)</option>
+                        <option value="Basic-2Months">Basic Plan (1 Device - 2 Months)</option>
+                        <option value="Basic-3Months">Basic Plan (1 Device - 3 Months)</option>
+                        <option value="Standard-Monthly">Standard Plan (3 Devices - 1 Month)</option>
+                        <option value="Standard-2Months">Standard Plan (3 Devices - 2 Months)</option>
+                        <option value="Standard-3Months">Standard Plan (3 Devices - 3 Months)</option>
+                        <option value="Enterprise-Monthly">Enterprise Plan (5 Devices - 1 Month)</option>
+                        <option value="Enterprise-2Months">Enterprise Plan (5 Devices - 2 Months)</option>
+                        <option value="Enterprise-3Months">Enterprise Plan (5 Devices - 3 Months)</option>
+                        <option value="Custom-Duration">Custom Duration (Use Calendar Below)</option>
                     </select>
 
                     <label>Custom Expiry Date (Calendar):</label>
                     <input type="date" name="custom_expiry" value="{default_expiry}">
-                    <small style="color: #64748b; display: block; margin-top: -8px; margin-bottom: 10px;">(২ বা ৩ মাসের জন্য দিলে এখান থেকে তারিখ সিলেক্ট করুন)</small>
+                    <small style="color: #64748b; display: block; margin-top: -8px; margin-bottom: 10px;">(যদি উপরে Custom সিলেক্ট করেন তবে এখান থেকে নির্দিষ্ট তারিখ দিন)</small>
 
                     <button type="submit">Create License ID</button>
                 </form>
@@ -157,8 +162,15 @@ def add_client():
     elif "Enterprise" in plan_choice:
         max_devices = 5
 
-    # ক্যালেন্ডার থেকে সিলেক্ট করা ডেট ব্যবহার করা, আর যদি কোনো কারণে ফাকা থাকে তবে ডিফল্ট ৩০ দিন
-    expiry_date = custom_expiry if custom_expiry else (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+    # মেয়াদ হিসাব করার অটোমেটিক লজিক
+    if plan_choice == "Custom-Duration" and custom_expiry:
+        expiry_date = custom_expiry
+    elif "2Months" in plan_choice:
+        expiry_date = (datetime.now() + timedelta(days=60)).strftime("%Y-%m-%d")
+    elif "3Months" in plan_choice:
+        expiry_date = (datetime.now() + timedelta(days=90)).strftime("%Y-%m-%d")
+    else:
+        expiry_date = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
 
     licenses = load_licenses()
     licenses[license_key] = {
