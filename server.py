@@ -45,7 +45,7 @@ def home():
     <p>Admin Dashboard: <a href='/admin?key=my_super_secret_admin_key_123'>/admin</a></p>
     """
 
-# ১. অ্যাডমিন ড্যাশবোর্ড (2-Month, 3-Month & Calendar Included)
+# ১. অ্যাডমিন ড্যাশবোর্ড (Trial, Monthly, Custom Plans & Calendar Included)
 @app.route("/admin", methods=["GET"])
 def admin_panel():
     key = request.args.get("key")
@@ -104,16 +104,25 @@ def admin_panel():
                     
                     <label>Select Plan Duration:</label>
                     <select name="plan_choice">
-                        <option value="Basic-Monthly">Basic Plan (1 Device - 1 Month)</option>
-                        <option value="Basic-2Months">Basic Plan (1 Device - 2 Months)</option>
-                        <option value="Basic-3Months">Basic Plan (1 Device - 3 Months)</option>
-                        <option value="Standard-Monthly">Standard Plan (3 Devices - 1 Month)</option>
-                        <option value="Standard-2Months">Standard Plan (3 Devices - 2 Months)</option>
-                        <option value="Standard-3Months">Standard Plan (3 Devices - 3 Months)</option>
-                        <option value="Enterprise-Monthly">Enterprise Plan (5 Devices - 1 Month)</option>
-                        <option value="Enterprise-2Months">Enterprise Plan (5 Devices - 2 Months)</option>
-                        <option value="Enterprise-3Months">Enterprise Plan (5 Devices - 3 Months)</option>
-                        <option value="Custom-Duration">Custom Duration (Use Calendar Below)</option>
+                        <optgroup label="Trial & Temporary Plans">
+                            <option value="Trial-1Day">Trial Plan (1 Day)</option>
+                            <option value="Trial-2Days">Trial Plan (2 Days)</option>
+                            <option value="Trial-7Days">Trial Plan (7 Days)</option>
+                        </optgroup>
+                        <optgroup label="Standard Duration Plans">
+                            <option value="Basic-Monthly">Basic Plan (1 Device - 1 Month)</option>
+                            <option value="Basic-2Months">Basic Plan (1 Device - 2 Months)</option>
+                            <option value="Basic-3Months">Basic Plan (1 Device - 3 Months)</option>
+                            <option value="Standard-Monthly">Standard Plan (3 Devices - 1 Month)</option>
+                            <option value="Standard-2Months">Standard Plan (3 Devices - 2 Months)</option>
+                            <option value="Standard-3Months">Standard Plan (3 Devices - 3 Months)</option>
+                            <option value="Enterprise-Monthly">Enterprise Plan (5 Devices - 1 Month)</option>
+                            <option value="Enterprise-2Months">Enterprise Plan (5 Devices - 2 Months)</option>
+                            <option value="Enterprise-3Months">Enterprise Plan (5 Devices - 3 Months)</option>
+                        </optgroup>
+                        <optgroup label="Custom Option">
+                            <option value="Custom-Duration">Custom Duration (Use Calendar Below)</option>
+                        </optgroup>
                     </select>
 
                     <label>Custom Expiry Date (Calendar):</label>
@@ -161,10 +170,18 @@ def add_client():
         max_devices = 1
     elif "Enterprise" in plan_choice:
         max_devices = 5
+    elif "Trial" in plan_choice:
+        max_devices = 1  # ট্রায়াল প্ল্যানের জন্য ডিফল্ট ১টি ডিভাইস
 
     # মেয়াদ হিসাব করার অটোমেটিক লজিক
     if plan_choice == "Custom-Duration" and custom_expiry:
         expiry_date = custom_expiry
+    elif plan_choice == "Trial-1Day":
+        expiry_date = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+    elif plan_choice == "Trial-2Days":
+        expiry_date = (datetime.now() + timedelta(days=2)).strftime("%Y-%m-%d")
+    elif plan_choice == "Trial-7Days":
+        expiry_date = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
     elif "2Months" in plan_choice:
         expiry_date = (datetime.now() + timedelta(days=60)).strftime("%Y-%m-%d")
     elif "3Months" in plan_choice:
