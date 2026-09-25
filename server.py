@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 import os
-from flask import Flask, jsonify, render_template_string, request, session, redirect, url_for
+from flask import Flask, jsonify, redirect, render_template_string, request, session, url_for
 
 app = Flask(__name__)
 app.secret_key = "iss_super_secure_client_session_key"
@@ -45,7 +45,6 @@ def home():
     <p>Admin Dashboard: <a href='/admin?key=my_super_secret_admin_key_123'>/admin</a></p>
     """
 
-# ১. অ্যাডমিন ড্যাশবোর্ড
 @app.route("/admin", methods=["GET"])
 def admin_panel():
     key = request.args.get("key")
@@ -79,11 +78,11 @@ def admin_panel():
         <style>
             body {{ font-family: Arial, sans-serif; background: #f4f4f9; padding: 15px; margin: 0; }}
             .container {{ display: flex; gap: 20px; flex-wrap: wrap; }}
-            .box {{ background: white; padding: 20px; border-radius: 8px; width: 100%%; max-width: 430px; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); box-sizing: border-box; }}
+            .box {{ background: white; padding: 20px; border-radius: 8px; width: 100%; max-width: 430px; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); box-sizing: border-box; }}
             .table-box {{ background: white; padding: 20px; border-radius: 8px; flex-grow: 1; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); overflow-x: auto; box-sizing: border-box; }}
-            input, select {{ width: 100%%; padding: 10px; margin: 6px 0 12px 0; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 4px; }}
-            button {{ background: #2563eb; color: white; padding: 12px; border: none; width: 100%%; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 15px; }}
-            table {{ width: 100%%; border-collapse: collapse; margin-top: 10px; min-width: 600px; }}
+            input, select {{ width: 100%; padding: 10px; margin: 6px 0 12px 0; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 4px; }}
+            button {{ background: #2563eb; color: white; padding: 12px; border: none; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 15px; }}
+            table {{ width: 100%; border-collapse: collapse; margin-top: 10px; min-width: 600px; }}
             th, td {{ border: 1px solid #e2e8f0; padding: 10px; text-align: left; font-size: 13px; }}
             th {{ background-color: #0f172a; color: white; }}
             .side-by-side {{ display: flex; gap: 10px; align-items: center; margin-top: 5px; }}
@@ -125,7 +124,6 @@ def admin_panel():
                             <option value="Enterprise (Custom/Trial)">Enterprise</option>
                         </select>
                     </div>
-                    <small style="color: #64748b; display: block; margin-top: 6px; margin-bottom: 12px;">(যদি নির্দিষ্ট দিন বা ট্রায়াল দিতে চান, তবে ওপরের অপশনে 'Custom Duration' সিলেক্ট করে এখান থেকে ক্যালেন্ডারে ডেট এবং পাশে প্ল্যান সিলেক্ট করে দিন)</small>
 
                     <button type="submit">Create License ID</button>
                 </form>
@@ -159,7 +157,7 @@ def add_client():
     license_key = request.form.get("license")
     plan_choice = request.form.get("plan_choice")
     custom_expiry = request.form.get("custom_expiry")
-    custom_plan_type = request.form.get("custom_plan_type", "Standard (Custom)")
+    custom_plan_type = request.form.get("custom_plan_type")
 
     if admin_key != ADMIN_SECRET_KEY:
         return "Unauthorized!", 401
@@ -167,11 +165,9 @@ def add_client():
     max_devices = 3
     final_plan_type = plan_choice
 
-    # যদি Custom Duration সিলেক্ট করা হয়
     if plan_choice == "Custom-Duration":
         expiry_date = custom_expiry if custom_expiry else (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
-        final_plan_type = custom_plan_type  
-        
+        final_plan_type = custom_plan_type
         if "Basic" in custom_plan_type:
             max_devices = 1
         elif "Enterprise" in custom_plan_type:
@@ -179,7 +175,6 @@ def add_client():
         else:
             max_devices = 3
     else:
-        # স্ট্যান্ডার্ড ১ মাস বা ১ বছরের লজিক
         if "1Year" in plan_choice:
             expiry_date = (datetime.now() + timedelta(days=365)).strftime("%Y-%m-%d")
         else:
@@ -192,8 +187,8 @@ def add_client():
 
     licenses = load_licenses()
     licenses[license_key] = {
-        "name": client_name if client_name else "Unknown",
-        "org": org_name if org_name else "Unknown",
+        "name": client_name,
+        "org": org_name,
         "expiry": expiry_date,
         "max_devices": max_devices,
         "plan_type": final_plan_type,
@@ -208,7 +203,6 @@ def add_client():
     </body>
     """
 
-# ২. ক্লায়েন্ট পোর্টাল লগইন
 @app.route("/client-login", methods=["GET", "POST"])
 def client_login():
     error_msg = ""
@@ -230,10 +224,9 @@ def client_login():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
             body {{ font-family: Arial, sans-serif; background: #f1f5f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; padding: 15px; box-sizing: border-box; }}
-            .login-card {{ background: white; padding: 25px; border-radius: 8px; width: 100%%; max-width: 350px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
-            input {{ width: 100%%; padding: 12px; margin: 10px 0; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 15px; }}
-            button {{ background: #0ea5e9; color: white; border: none; padding: 12px; width: 100%%; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 15px; }}
-            button:hover {{ background: #0284c7; }}
+            .login-card {{ background: white; padding: 25px; border-radius: 8px; width: 100%; max-width: 350px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
+            input {{ width: 100%; padding: 12px; margin: 10px 0; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 15px; }}
+            button {{ background: #0ea5e9; color: white; border: none; padding: 12px; width: 100%; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 15px; }}
         </style>
     </head>
     <body>
@@ -250,7 +243,6 @@ def client_login():
     </html>
     """)
 
-# ৩. ক্লায়েন্ট ড্যাশবোর্ড ও ওয়ান-ক্লিক সেটআপ
 @app.route("/client-dashboard", methods=["GET", "POST"])
 def client_dashboard():
     license_key = session.get('active_license')
@@ -290,8 +282,7 @@ def client_dashboard():
             .info-group {{ margin: 15px 0; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0; }}
             .label {{ font-weight: bold; color: #64748b; font-size: 13px; }}
             .value {{ font-size: 15px; color: #0f172a; margin-top: 3px; word-break: break-all; }}
-            .setup-btn {{ background: #16a34a; color: white; border: none; padding: 14px 20px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%%; margin-top: 15px; }}
-            .setup-btn:hover {{ background: #15803d; }}
+            .setup-btn {{ background: #16a34a; color: white; border: none; padding: 14px 20px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%; margin-top: 15px; }}
             .logout {{ display: inline-block; margin-top: 20px; color: #dc2626; text-decoration: none; font-size: 14px; font-weight: bold; }}
         </style>
     </head>
@@ -324,11 +315,6 @@ def client_dashboard():
                 <div class="value">{len(v['pcs'])} / {v['max_devices']} Device(s) [<code>{connected_devices}</code>]</div>
             </div>
 
-            <div class="info-group">
-                <div class="label">Recent Security Report</div>
-                <div class="value" style="color: #16a34a;">No threats detected. All systems running safely.</div>
-            </div>
-
             {'<div style="background: #f0fdf4; padding: 15px; border-radius: 6px; border: 1px solid #bbf7d0; margin-top: 15px; font-size: 14px;"><b>Great!</b> Your device is already set up and linked with this license.</div>' if is_setup_done else '''
             <form method="POST">
                 <p style="font-size: 14px; color: #475569;">আপনার ডিভাইস কনফিগার করতে নিচের বাটনে ক্লিক করুন। মাত্র ৩০ সেকেন্ডের মধ্যে সব সেটআপ হয়ে যাবে!</p>
@@ -342,7 +328,6 @@ def client_dashboard():
     </html>
     """)
 
-# ৪. স্ক্যান ভ্যালিডেশন রুট
 @app.route("/scan", methods=["POST"])
 def scan_file():
     data = request.json or {}
