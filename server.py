@@ -255,31 +255,31 @@ def home():
     user_data = users.get(current_user) if current_user else None
     is_admin = user_data and user_data['role'] == 'Admin'
 
-    return render_template_string(f"""
+    return render_template_string("""
     <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
         <title>ISS Cloud Security & Social Platform</title>
         <style>
-            :root {{
+            :root {
                 --bg-primary: #060913; --bg-secondary: #0b1120; --bg-card: #111827;
                 --accent-blue: #0ea5e9; --accent-hover: #0284c7; --text-main: #f8fafc;
                 --text-muted: #94a3b8; --border-color: #1e293b;
-            }}
-            body {{ font-family: 'Segoe UI', system-ui, sans-serif; background-color: var(--bg-primary); color: var(--text-main); margin: 0; padding: 0; }}
-            .navbar {{ display: flex; justify-content: space-between; align-items: center; padding: 18px 6%; border-bottom: 1px solid var(--border-color); background: rgba(6, 9, 19, 0.95); position: sticky; top: 0; z-index: 1000; }}
-            .logo {{ font-size: 20px; font-weight: 800; color: var(--text-main); text-decoration: none; }}
-            .logo span {{ color: var(--accent-blue); }}
-            .nav-links {{ display: flex; gap: 20px; align-items: center; }}
-            .nav-links a {{ color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500; }}
-            .nav-links a:hover {{ color: var(--accent-blue); }}
-            .container {{ max-width: 900px; margin: 30px auto; padding: 0 15px; }}
-            .card {{ background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }}
-            input, textarea {{ width: 100%; padding: 12px; margin: 8px 0 14px 0; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; color: white; box-sizing: border-box; }}
-            button {{ background: var(--accent-blue); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }}
-            button:hover {{ background: var(--accent-hover); }}
-            .avatar {{ width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-blue); }}
+            }
+            body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: var(--bg-primary); color: var(--text-main); margin: 0; padding: 0; }
+            .navbar { display: flex; justify-content: space-between; align-items: center; padding: 18px 6%; border-bottom: 1px solid var(--border-color); background: rgba(6, 9, 19, 0.95); position: sticky; top: 0; z-index: 1000; }
+            .logo { font-size: 20px; font-weight: 800; color: var(--text-main); text-decoration: none; }
+            .logo span { color: var(--accent-blue); }
+            .nav-links { display: flex; gap: 20px; align-items: center; }
+            .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500; }
+            .nav-links a:hover { color: var(--accent-blue); }
+            .container { max-width: 900px; margin: 30px auto; padding: 0 15px; }
+            .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+            input, textarea { width: 100%; padding: 12px; margin: 8px 0 14px 0; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; color: white; box-sizing: border-box; }
+            button { background: var(--accent-blue); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+            button:hover { background: var(--accent-hover); }
+            .avatar { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-blue); }
         </style>
     </head>
     <body>
@@ -291,7 +291,7 @@ def home():
                 <a href="#contact">Contact Us</a>
                 <a href="#tickets">Support Tickets</a>
                 <a href="/my-profile">My Profile</a>
-                {'''<a href="/admin" style="color: #38bdf8; font-weight: bold;">Admin Panel</a>''' if is_admin else ''}
+                {% if is_admin %}<a href="/admin" style="color: #38bdf8; font-weight: bold;">Admin Panel</a>{% endif %}
                 <a href="/client-login">Client Portal</a>
             </div>
         </nav>
@@ -300,7 +300,12 @@ def home():
             <div class="card" style="text-align: center; padding: 50px 20px;">
                 <h1>Next-Gen Cloud Security & Social Hub</h1>
                 <p style="color: var(--text-muted); max-width: 650px; margin: 0 auto 20px auto;">Connect with professionals, manage security licenses, and communicate securely through private tickets.</p>
-                {'<p style="color: #34d399; font-weight: bold;">Welcome back, ' + current_user + (ADMIN_BADGE_SVG if is_admin else (TRUSTED_BLACK_BADGE_SVG if user_data.get('trusted') else '')) + '</p>' if current_user else '<a href="/my-profile" style="background:var(--accent-blue); color:white; padding:10px 20px; border-radius:6px; text-decoration:none; font-weight:bold;">Login / Register (Social Join)</a>'}
+                {% if current_user %}
+                    <p style="color: #34d399; font-weight: bold;">Welcome back, {{ current_user }} 
+                    {% if is_admin %}{{ admin_badge | safe }}{% elif user_data.get('trusted') %}{{ trusted_badge | safe }}{% endif %}</p>
+                {% else %}
+                    <a href="/my-profile" style="background:var(--accent-blue); color:white; padding:10px 20px; border-radius:6px; text-decoration:none; font-weight:bold;">Login / Register (Social Join)</a>
+                {% endif %}
             </div>
 
             <!-- Membership & Device Plans Info Section -->
@@ -337,11 +342,11 @@ def home():
                 <p style="font-size: 13px; color: var(--text-muted);">Share your thoughts, updates, and images with the community.</p>
                 
                 <form method="GET" action="/" style="margin-bottom: 20px; display: flex; gap: 10px;">
-                    <input type="text" name="search" placeholder="Search user by username..." value="{search_query}" style="margin:0;">
+                    <input type="text" name="search" placeholder="Search user by username..." value="{{ search_query }}" style="margin:0;">
                     <button type="submit" style="width: auto;">Search</button>
                 </form>
 
-                {f'''
+                {% if current_user %}
                 <div style="background:var(--bg-secondary); padding:15px; border-radius:8px; margin-bottom:20px;">
                     <form method="POST" enctype="multipart/form-data">
                         <input type="hidden" name="form_type" value="create_post">
@@ -351,32 +356,41 @@ def home():
                         <button type="submit">Post to ISS Social</button>
                     </form>
                 </div>
-                ''' if current_user else '<p style="font-size:13px; color:#94a3b8;">Please <a href="/my-profile" style="color:#0ea5e9;">login via My Profile</a> to join social and create posts.</p>'}
+                {% else %}
+                <p style="font-size:13px; color:#94a3b8;">Please <a href="/my-profile" style="color:#0ea5e9;">login via My Profile</a> to join social and create posts.</p>
+                {% endif %}
 
                 <div>
-                    {"".join([f'''
-                    <div style="background:var(--bg-secondary); padding:15px; border-radius:8px; margin-bottom:15px; border:1px solid var(--border-color);">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                            <b>{p['author']}</b> {ADMIN_BADGE_SVG if users.get(p['author'], {}).get('role') == 'Admin' else (TRUSTED_BLACK_BADGE_SVG if users.get(p['author'], {}).get('trusted') else '')}
-                            <span style="font-size:11px; color:var(--text-muted);">{p['date']}</span>
+                    {% if posts %}
+                        {% for p in posts %}
+                        <div style="background:var(--bg-secondary); padding:15px; border-radius:8px; margin-bottom:15px; border:1px solid var(--border-color);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                <b>{{ p.author }}</b> 
+                                {% if users.get(p.author, {}).get('role') == 'Admin' %}{{ admin_badge | safe }}
+                                {% elif users.get(p.author, {}).get('trusted') %}{{ trusted_badge | safe }}{% endif %}
+                                <span style="font-size:11px; color:var(--text-muted);">{{ p.date }}</span>
+                            </div>
+                            <p style="margin:0 0 10px 0; font-size:14px;">{{ p.content }}</p>
+                            {% if p.img %}<img src="{{ p.img }}" style="max-width:100%; border-radius:6px; max-height:300px; object-fit:cover;" />{% endif %}
                         </div>
-                        <p style="margin:0 0 10px 0; font-size:14px;">{p['content']}</p>
-                        {f'<img src="{p["img"]}" style="max-width:100%; border-radius:6px; max-height:300px; object-fit:cover;" />' if p['img'] else ''}
-                    </div>
-                    ''' for p in posts]) if posts else '<p style="color:var(--text-muted);">No posts shared yet.</p>'}
+                        {% endfor %}
+                    {% else %}
+                        <p style="color:var(--text-muted);">No posts shared yet.</p>
+                    {% endif %}
                 </div>
 
                 <h4 style="margin-top:30px;">Community Directory</h4>
                 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">
-                    {"".join([f'''
+                    {% for u, d in filtered_users.items() %}
                     <div style="background:var(--bg-secondary); padding:10px; border-radius:6px; display:flex; align-items:center; gap:10px;">
-                        <img src="{d['pic']}" class="avatar" style="width:35px; height:35px;" />
+                        <img src="{{ d.pic }}" class="avatar" style="width:35px; height:35px;" />
                         <div>
-                            <div style="font-size:13px; font-weight:bold;"><a href="/my-profile?user={u}" style="color:white; text-decoration:none;">{u}</a> {ADMIN_BADGE_SVG if d['role'] == 'Admin' else (TRUSTED_BLACK_BADGE_SVG if d.get('trusted') else '')}</div>
-                            <div style="font-size:11px; color:var(--text-muted);">{d['role']}</div>
+                            <div style="font-size:13px; font-weight:bold;"><a href="/my-profile?user={{ u }}" style="color:white; text-decoration:none;">{{ u }}</a> 
+                            {% if d.role == 'Admin' %}{{ admin_badge | safe }}{% elif d.get('trusted') %}{{ trusted_badge | safe }}{% endif %}</div>
+                            <div style="font-size:11px; color:var(--text-muted);">{{ d.role }}</div>
                         </div>
                     </div>
-                    ''' for u, d in filtered_users.items()])}
+                    {% endfor %}
                 </div>
             </div>
 
@@ -384,7 +398,9 @@ def home():
             <div class="card" id="contact">
                 <h3>📞 Contact Us & Service Application</h3>
                 <p style="font-size: 13px; color: var(--text-muted);">Apply to get our enterprise security features and license solutions.</p>
-                {f'<div style="background: rgba(16,185,129,0.1); border: 1px solid #10b981; color: #34d399; padding: 10px; border-radius: 6px; font-size: 13px; margin-bottom: 15px;">{inquiry_msg}</div>' if inquiry_msg else ''}
+                {% if inquiry_msg %}
+                <div style="background: rgba(16,185,129,0.1); border: 1px solid #10b981; color: #34d399; padding: 10px; border-radius: 6px; font-size: 13px; margin-bottom: 15px;">{{ inquiry_msg }}</div>
+                {% endif %}
                 <form method="POST">
                     <input type="hidden" name="form_type" value="inquiry">
                     <input type="text" name="name" placeholder="Your Full Name" required>
@@ -397,12 +413,18 @@ def home():
             <div class="card" id="tickets">
                 <h3>💬 Support Tickets (Messenger)</h3>
                 <p style="font-size: 13px; color: var(--text-muted);">Have questions or need assistance? Open a support ticket to chat privately with admins.</p>
-                {f'<a href="/ticket-chat" style="display:inline-block; background:var(--accent-blue); color:white; padding:10px 20px; border-radius:6px; text-decoration:none; font-weight:bold; margin-top:10px;">Open My Support Chat</a>' if current_user else '<p style="font-size:13px; color:#fca5a5;">Please login via My Profile to access support tickets.</p>'}
+                {% if current_user %}
+                <a href="/ticket-chat" style="display:inline-block; background:var(--accent-blue); color:white; padding:10px 20px; border-radius:6px; text-decoration:none; font-weight:bold; margin-top:10px;">Open My Support Chat</a>
+                {% else %}
+                <p style="font-size:13px; color:#fca5a5;">Please login via My Profile to access support tickets.</p>
+                {% endif %}
             </div>
         </div>
     </body>
     </html>
-    """)
+    """, current_user=current_user, user_data=user_data, is_admin=is_admin, posts=posts, 
+    filtered_users=filtered_users, search_query=search_query, inquiry_msg=inquiry_msg, 
+    admin_badge=ADMIN_BADGE_SVG, trusted_badge=TRUSTED_BLACK_BADGE_SVG, users=users)
 
 # --- MY PROFILE ---
 @app.route("/my-profile", methods=["GET", "POST"])
@@ -517,24 +539,24 @@ def my_profile():
 
     is_viewer_admin = user_data and user_data['role'] == 'Admin'
 
-    return render_template_string(f"""
+    return render_template_string("""
     <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
         <title>My Profile - ISS Platform</title>
         <style>
-            :root {{
+            :root {
                 --bg-primary: #060913; --bg-secondary: #0b1120; --bg-card: #111827;
                 --accent-blue: #0ea5e9; --accent-hover: #0284c7; --text-main: #f8fafc;
                 --text-muted: #94a3b8; --border-color: #1e293b;
-            }}
-            body {{ font-family: 'Segoe UI', system-ui, sans-serif; background-color: var(--bg-primary); color: var(--text-main); margin: 0; padding: 20px; }}
-            .container {{ max-width: 600px; margin: 30px auto; background: var(--bg-card); padding: 35px; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 10px 25px rgba(0,0,0,0.4); }}
-            input, select {{ width: 100%; padding: 12px; margin: 8px 0 16px 0; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; color: white; box-sizing: border-box; }}
-            button {{ width: 100%; padding: 12px; background: var(--accent-blue); border: none; color: white; font-weight: bold; border-radius: 6px; cursor: pointer; }}
-            button:hover {{ background: var(--accent-hover); }}
-            .avatar-lg {{ width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 3px solid var(--accent-blue); }}
+            }
+            body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: var(--bg-primary); color: var(--text-main); margin: 0; padding: 20px; }
+            .container { max-width: 600px; margin: 30px auto; background: var(--bg-card); padding: 35px; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
+            input, select { width: 100%; padding: 12px; margin: 8px 0 16px 0; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; color: white; box-sizing: border-box; }
+            button { width: 100%; padding: 12px; background: var(--accent-blue); border: none; color: white; font-weight: bold; border-radius: 6px; cursor: pointer; }
+            button:hover { background: var(--accent-hover); }
+            .avatar-lg { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 3px solid var(--accent-blue); }
         </style>
     </head>
     <body>
@@ -542,23 +564,24 @@ def my_profile():
             <a href="/" style="color:var(--accent-blue); text-decoration:none; font-weight:bold;">&larr; Back to Home / Social Feed</a>
         </div>
         <div class="container">
-            {f'<div style="color:#ef4444; font-size:13px; margin-bottom:15px; padding:10px; background:rgba(239,68,68,0.1); border-radius:6px;">{error}</div>' if error else ''}
-            {f'<div style="color:#34d399; font-size:13px; margin-bottom:15px; padding:10px; background:rgba(16,185,129,0.1); border-radius:6px;">{msg}</div>' if msg else ''}
+            {% if error %}<div style="color:#ef4444; font-size:13px; margin-bottom:15px; padding:10px; background:rgba(239,68,68,0.1); border-radius:6px;">{{ error }}</div>{% endif %}
+            {% if msg %}<div style="color:#34d399; font-size:13px; margin-bottom:15px; padding:10px; background:rgba(16,185,129,0.1); border-radius:6px;">{{ msg }}</div>{% endif %}
 
-            {f'''
+            {% if current_user and view_data %}
             <div style="text-align:center;">
-                <img src="{view_data['pic']}" class="avatar-lg" />
-                <h2 style="margin:15px 0 5px 0;">{view_user_name} {ADMIN_BADGE_SVG if view_data['role'] == 'Admin' else (TRUSTED_BLACK_BADGE_SVG if view_data.get('trusted') else '')}</h2>
-                <p style="color:var(--text-muted); font-size:14px; margin:0 0 20px 0;">Email: {view_data['email']} | Role: <b>{view_data['role']}</b></p>
+                <img src="{{ view_data.pic }}" class="avatar-lg" />
+                <h2 style="margin:15px 0 5px 0;">{{ view_user_name }} 
+                {% if view_data.role == 'Admin' %}{{ admin_badge | safe }}{% elif view_data.get('trusted') %}{{ trusted_badge | safe }}{% endif %}</h2>
+                <p style="color:var(--text-muted); font-size:14px; margin:0 0 20px 0;">Email: {{ view_data.email }} | Role: <b>{{ view_data.role }}</b></p>
             </div>
 
-            {f'''
+            {% if view_user_name == current_user %}
             <div style="background:var(--bg-secondary); padding:20px; border-radius:8px; margin-top:20px;">
                 <h4>Change Username & Password</h4>
                 <form method="POST">
                     <input type="hidden" name="action" value="update_credentials">
                     <label style="font-size:12px; color:var(--text-muted);">New Username</label>
-                    <input type="text" name="new_username" value="{view_user_name}" required>
+                    <input type="text" name="new_username" value="{{ view_user_name }}" required>
                     <label style="font-size:12px; color:var(--text-muted);">New Password</label>
                     <input type="password" name="new_password" placeholder="Enter new password" required>
                     <button type="submit">Update Credentials</button>
@@ -574,27 +597,27 @@ def my_profile():
                     <button type="submit">Upload Picture</button>
                 </form>
             </div>
-            ''' if view_user_name == current_user else ''}
+            {% endif %}
 
-            {f'''
+            {% if is_viewer_admin and view_data.role != 'Admin' %}
             <div style="background:var(--bg-secondary); padding:20px; border-radius:8px; margin-top:20px; border: 1px dashed var(--accent-blue);">
                 <h4 style="color:var(--accent-blue); margin-top:0;">Admin Trust Control</h4>
                 <p style="font-size:12px; color:var(--text-muted);">As an admin, you can assign or remove the Trusted Black Badge for this profile.</p>
                 <form method="POST">
                     <input type="hidden" name="action" value="toggle_trusted">
-                    <input type="hidden" name="target_user" value="{view_user_name}">
-                    <button type="submit" style="background:{'#ef4444' if view_data.get('trusted') else '#10b981'};">
-                        {'Remove Trusted Black Badge' if view_data.get('trusted') else 'Add to Trusted (Black Badge)'}
+                    <input type="hidden" name="target_user" value="{{ view_user_name }}">
+                    <button type="submit" style="background:{% if view_data.get('trusted') %}#ef4444{% else %}#10b981{% endif %};">
+                        {% if view_data.get('trusted') %}Remove Trusted Black Badge{% else %}Add to Trusted (Black Badge){% endif %}
                     </button>
                 </form>
             </div>
-            ''' if is_viewer_admin and view_data['role'] != 'Admin' else ''}
+            {% endif %}
 
             <div style="text-align:center; margin-top:25px;">
                 <a href="/logout" style="color:#ef4444; font-weight:bold; font-size:14px; text-decoration:none;">Log Out Account</a>
-                {f'<br><br><a href="/admin" style="color:#38bdf8; font-weight:bold; text-decoration:none;">Go to Admin Control Panel &rarr;</a>' if user_data['role'] == 'Admin' else ''}
+                {% if user_data.role == 'Admin' %}<br><br><a href="/admin" style="color:#38bdf8; font-weight:bold; text-decoration:none;">Go to Admin Control Panel &rarr;</a>{% endif %}
             </div>
-            ''' if current_user else '''
+            {% else %}
             <div style="display:flex; justify-content:center; gap:10px; margin-bottom:20px;">
                 <button onclick="document.getElementById('login-form').style.display='block'; document.getElementById('reg-form').style.display='none';" style="background:#1e293b;">Login</button>
                 <button onclick="document.getElementById('reg-form').style.display='block'; document.getElementById('login-form').style.display='none';" style="background:#1e293b;">Register</button>
@@ -629,11 +652,13 @@ def my_profile():
                     <button type="submit" style="margin-top: 10px;">Register Account</button>
                 </form>
             </div>
-            '''}
+            {% endif %}
         </div>
     </body>
     </html>
-    """)
+    """, error=error, msg=msg, current_user=current_user, view_data=view_data, 
+    view_user_name=view_user_name, user_data=user_data, is_viewer_admin=is_viewer_admin, 
+    admin_badge=ADMIN_BADGE_SVG, trusted_badge=TRUSTED_BLACK_BADGE_SVG)
 
 @app.route("/logout")
 def logout():
@@ -659,7 +684,6 @@ def admin_panel():
                 save_admin_data(new_em, new_uname, new_pwd)
                 msg = f"✅ Admin '{new_uname}' ({new_em}) added successfully!"
         
-        # --- নতুন সংযোজন: অ্যাডমিনদের ইউজারনেম এবং পাসওয়ার্ড পরিবর্তনের হ্যান্ডলার ---
         elif action == "update_admin_credentials":
             target_em = request.form.get("admin_email", "").strip()
             new_uname = request.form.get("new_admin_username", "").strip()
@@ -667,9 +691,7 @@ def admin_panel():
             
             admin_data = load_admin_data()
             if target_em in admin_data:
-                # যদি ইউজারনেম পরিবর্তন করা হয়, তবে ডিকশনারির কি বা ডাটা আপডেট করতে হবে
                 old_uname = admin_data[target_em]["username"]
-                # যদি নতুন পাসওয়ার্ড না দেওয়া হয় তবে পুরাতন পাসওয়ার্ড বহাল থাকবে
                 pwd_to_save = new_pwd if new_pwd else admin_data[target_em]["password"]
                 uname_to_save = new_uname if new_uname else old_uname
                 
@@ -705,7 +727,6 @@ def admin_panel():
             save_licenses(licenses)
             msg = f"✅ License '{l_key}' created successfully with plan '{l_plan}'!"
         
-        # --- নতুন সংযোজন: সাধারণ ইউজারদের ইউজারনেম ও পাসওয়ার্ড সরাসরি অ্যাডমিন প্যানেল থেকে পরিবর্তনের হ্যান্ডলার ---
         elif action == "admin_update_user":
             target_old_uname = request.form.get("target_old_username", "").strip()
             new_uname = request.form.get("new_username", "").strip()
@@ -737,30 +758,30 @@ def admin_panel():
                 if len(parts) >= 4:
                     inquiries.append({"name": parts[0], "email": parts[1], "social": parts[2], "date": parts[3]})
 
-    return render_template_string(f"""
+    return render_template_string("""
     <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
         <title>Admin Control Panel</title>
         <style>
-            body {{ font-family: 'Segoe UI', sans-serif; background: #060913; color: #f8fafc; margin: 0; padding: 20px; }}
-            .navbar {{ display: flex; justify-content: space-between; align-items: center; background: #111827; padding: 15px 25px; border-radius: 10px; border: 1px solid #1e293b; margin-bottom: 25px; }}
-            .box {{ background: #111827; padding: 25px; border-radius: 12px; border: 1px solid #1e293b; margin-bottom: 25px; }}
-            table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
-            th, td {{ border: 1px solid #1e293b; padding: 12px; text-align: left; font-size: 13px; }}
-            th {{ background: #1a2234; color: #38bdf8; }}
-            input, select, button {{ padding: 10px; margin: 5px 0; background: #060913; border: 1px solid #334155; color: white; border-radius: 6px; box-sizing: border-box; }}
-            button {{ background: #0ea5e9; font-weight: bold; cursor: pointer; border: none; }}
+            body { font-family: 'Segoe UI', sans-serif; background: #060913; color: #f8fafc; margin: 0; padding: 20px; }
+            .navbar { display: flex; justify-content: space-between; align-items: center; background: #111827; padding: 15px 25px; border-radius: 10px; border: 1px solid #1e293b; margin-bottom: 25px; }
+            .box { background: #111827; padding: 25px; border-radius: 12px; border: 1px solid #1e293b; margin-bottom: 25px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th, td { border: 1px solid #1e293b; padding: 12px; text-align: left; font-size: 13px; }
+            th { background: #1a2234; color: #38bdf8; }
+            input, select, button { padding: 10px; margin: 5px 0; background: #060913; border: 1px solid #334155; color: white; border-radius: 6px; box-sizing: border-box; }
+            button { background: #0ea5e9; font-weight: bold; cursor: pointer; border: none; }
         </style>
     </head>
     <body>
         <div class="navbar">
-            <h2>🛡️ Admin Center ({current_user} {ADMIN_BADGE_SVG})</h2>
+            <h2>🛡️ Admin Center ({{ current_user }} {{ admin_badge | safe }})</h2>
             <a href="/" style="color: #38bdf8; text-decoration: none; font-weight: bold;">&larr; Back to Home</a>
         </div>
 
-        {f'<div style="background: rgba(16,185,129,0.1); border: 1px solid #10b981; color: #34d399; padding: 12px; border-radius: 8px; margin-bottom: 20px;">{msg}</div>' if msg else ''}
+        {% if msg %}<div style="background: rgba(16,185,129,0.1); border: 1px solid #10b981; color: #34d399; padding: 12px; border-radius: 8px; margin-bottom: 20px;">{{ msg }}</div>{% endif %}
 
         <!-- Add New Admin Form -->
         <div class="box">
@@ -784,20 +805,22 @@ def admin_panel():
             
             <h4 style="margin-top: 20px;">Authorized Admins & Credentials Change:</h4>
             <div style="display: flex; flex-direction: column; gap: 15px; margin-top: 10px;">
-                {"".join([f'''
+                {% for em, data in admin_data.items() %}
                 <div style="background:#060913; padding:15px; border-radius:8px; border:1px solid #1e293b;">
-                    <p style="margin:0 0 10px 0; font-size:13px;"><b>Email:</b> {em} | <b>Current Username:</b> {data["username"]} {("(Master Owner)" if em == OWNER_EMAIL else "")}</p>
+                    <p style="margin:0 0 10px 0; font-size:13px;"><b>Email:</b> {{ em }} | <b>Current Username:</b> {{ data.username }} {% if em == OWNER_EMAIL %}(Master Owner){% endif %}</p>
                     <form method="POST" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px; align-items:center;">
                         <input type="hidden" name="action" value="update_admin_credentials">
-                        <input type="hidden" name="admin_email" value="{em}">
-                        <input type="text" name="new_admin_username" placeholder="New Username" value="{data["username"]}" required>
-                        <input type="text" name="new_admin_password" placeholder="New Password" value="{data["password"]}" required>
+                        <input type="hidden" name="admin_email" value="{{ em }}">
+                        <input type="text" name="new_admin_username" placeholder="New Username" value="{{ data.username }}" required>
+                        <input type="text" name="new_admin_password" placeholder="New Password" value="{{ data.password }}" required>
                         <button type="submit" style="background:#0284c7;">Update Admin</button>
-                        {"" if em == OWNER_EMAIL else f'<button type="submit" formaction="/admin" formmethod="POST" name="action" value="remove_admin_email" onclick="this.form.querySelector(\'[name=remove_email]\').value=\'{em}\';" style="background:#ef4444;">Remove</button>'}
+                        {% if em != OWNER_EMAIL %}
+                        <button type="submit" formaction="/admin" formmethod="POST" name="action" value="remove_admin_email" onclick="this.form.querySelector('[name=remove_email]').value='{{ em }}';" style="background:#ef4444;">Remove</button>
+                        {% endif %}
                     </form>
                     <input type="hidden" name="remove_email" value="">
                 </div>
-                ''' for em, data in admin_data.items()])}
+                {% endfor %}
             </div>
         </div>
 
@@ -806,18 +829,23 @@ def admin_panel():
             <h3>👤 Manage & Change All Users' Passwords/Usernames</h3>
             <p style="font-size:13px; color:#94a3b8;">You can directly change any registered user's username or password from here.</p>
             <div style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px;">
-                {"".join([f'''
-                <div style="background:#060913; padding:15px; border-radius:8px; border:1px solid #1e293b;">
-                    <p style="margin:0 0 10px 0; font-size:13px;"><b>Email:</b> {u_val['email']} | <b>Current Username:</b> {u_name} | <b>Role:</b> {u_val['role']}</p>
-                    <form method="POST" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px; align-items:center;">
-                        <input type="hidden" name="action" value="admin_update_user">
-                        <input type="hidden" name="target_old_username" value="{u_name}">
-                        <input type="text" name="new_username" placeholder="New Username" value="{u_name}" required>
-                        <input type="text" name="new_password" placeholder="New Password" value="{u_val['password']}" required>
-                        <button type="submit" style="background:#0ea5e9;">Update User</button>
-                    </form>
-                </div>
-                ''' for u_name, u_val in users.items() if u_val['role'] != 'Admin']) if len([u for u, v in users.items() if v['role'] != 'Admin']) > 0 else '<p style="color:#94a3b8; font-size:13px;">No regular users registered yet.</p>'}
+                {% set reg_users = users.items() | selectattr("1.role", "ne", "Admin") | list %}
+                {% if reg_users %}
+                    {% for u_name, u_val in reg_users %}
+                    <div style="background:#060913; padding:15px; border-radius:8px; border:1px solid #1e293b;">
+                        <p style="margin:0 0 10px 0; font-size:13px;"><b>Email:</b> {{ u_val.email }} | <b>Current Username:</b> {{ u_name }} | <b>Role:</b> {{ u_val.role }}</p>
+                        <form method="POST" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px; align-items:center;">
+                            <input type="hidden" name="action" value="admin_update_user">
+                            <input type="hidden" name="target_old_username" value="{{ u_name }}">
+                            <input type="text" name="new_username" placeholder="New Username" value="{{ u_name }}" required>
+                            <input type="text" name="new_password" placeholder="New Password" value="{{ u_val.password }}" required>
+                            <button type="submit" style="background:#0ea5e9;">Update User</button>
+                        </form>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p style="color:#94a3b8; font-size:13px;">No regular users registered yet.</p>
+                {% endif %}
             </div>
         </div>
 
@@ -846,7 +874,27 @@ def admin_panel():
             </form>
             <table>
                 <tr><th>Key</th><th>Client</th><th>Org</th><th>Plan Tier & Device Limit</th><th>Expiry</th><th>Credentials</th><th>Action</th></tr>
-                {"".join([f'<tr><td><code>{k}</code></td><td>{v["name"]}</td><td>{v["org"]}</td><td><b>{v["plan"]}</b></td><td>{v["expiry"]}</td><td><code>{v.get("client_user","admin")} / {v.get("client_pwd","admin")}</code></td><td><form method="POST" style="margin:0;"><input type="hidden" name="action" value="delete_license"><input type="hidden" name="lic_key" value="{k}"><button type="submit" style="background:#ef4444; padding:4px 8px; font-size:11px;">Delete / Block</button></form></td></tr>' for k, v in licenses.items()]) if licenses else '<tr><td colspan="7" style="text-align:center; color:#94a3b8;">No licenses found.</td></tr>'}
+                {% if licenses %}
+                    {% for k, v in licenses.items() %}
+                    <tr>
+                        <td><code>{{ k }}</code></td>
+                        <td>{{ v.name }}</td>
+                        <td>{{ v.org }}</td>
+                        <td><b>{{ v.plan }}</b></td>
+                        <td>{{ v.expiry }}</td>
+                        <td><code>{{ v.get('client_user', 'admin') }} / {{ v.get('client_pwd', 'admin') }}</code></td>
+                        <td>
+                            <form method="POST" style="margin:0;">
+                                <input type="hidden" name="action" value="delete_license">
+                                <input type="hidden" name="lic_key" value="{{ k }}">
+                                <button type="submit" style="background:#ef4444; padding:4px 8px; font-size:11px;">Delete / Block</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="7" style="text-align:center; color:#94a3b8;">No licenses found.</td></tr>
+                {% endif %}
             </table>
         </div>
 
@@ -854,12 +902,24 @@ def admin_panel():
             <h3>📋 'Contact Us' Service Applications</h3>
             <table>
                 <tr><th>Name</th><th>Email</th><th>Social Link</th><th>Date</th></tr>
-                {"".join([f'<tr><td>{i["name"]}</td><td>{i["email"]}</td><td><a href="{i["social"]}" target="_blank" style="color:#38bdf8;">Profile</a></td><td>{i["date"]}</td></tr>' for i in inquiries]) if inquiries else '<tr><td colspan="4" style="text-align:center; color:#94a3b8;">No applications.</td></tr>'}
+                {% if inquiries %}
+                    {% for i in inquiries %}
+                    <tr>
+                        <td>{{ i.name }}</td>
+                        <td>{{ i.email }}</td>
+                        <td><a href="{{ i.social }}" target="_blank" style="color:#38bdf8;">Profile</a></td>
+                        <td>{{ i.date }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="4" style="text-align:center; color:#94a3b8;">No applications.</td></tr>
+                {% endif %}
             </table>
         </div>
     </body>
     </html>
-    """)
+    """, current_user=current_user, admin_badge=ADMIN_BADGE_SVG, msg=msg, 
+    admin_data=admin_data, users=users, OWNER_EMAIL=OWNER_EMAIL, licenses=licenses, inquiries=inquiries)
 
 @app.route("/admin/tickets", methods=["GET", "POST"])
 def admin_tickets():
@@ -878,23 +938,7 @@ def admin_tickets():
             save_ticket_msg(t_id, tickets.get(t_id, {}).get("user", "client"), f"Admin ({current_user} 👑✔)", reply_text)
             return redirect(url_for('admin_tickets', tid=t_id))
 
-    ticket_list_html = "".join([f'<a href="/admin/tickets?tid={tid}" style="display:block; padding:10px; margin:6px 0; background:#1e293b; color:#38bdf8; text-decoration:none; border-radius:6px; font-size:13px;">Ticket: {tid} (User: {data["user"]})</a>' for tid, data in tickets.items()])
-
-    chat_box_html = "<p style='color:#94a3b8;'>Select a ticket from the left list to view and reply.</p>"
-    if selected_tid and selected_tid in tickets:
-        t_data = tickets[selected_tid]
-        msgs_html = "".join([f"<div style='background:#060913; padding:8px 12px; margin:6px 0; border-radius:6px; font-size:13px;'>{m}</div>" for m in t_data["messages"]])
-        chat_box_html = f"""
-        <h4>Messenger Chat for Ticket: {selected_tid}</h4>
-        <div style="background:#060913; height:260px; overflow-y:auto; border:1px solid #1e293b; padding:10px; border-radius:6px; margin-bottom:12px;">{msgs_html}</div>
-        <form method="POST">
-            <input type="hidden" name="tid" value="{selected_tid}">
-            <input type="text" name="reply" placeholder="Type reply as admin..." required style="width:78%; padding:10px; background:#060913; border:1px solid #334155; color:white; border-radius:6px;">
-            <button type="submit" style="width:20%; padding:10px; background:#0ea5e9; border:none; font-weight:bold; color:white; border-radius:6px; cursor:pointer;">Send</button>
-        </form>
-        """
-
-    return render_template_string(f"""
+    return render_template_string("""
     <!DOCTYPE html>
     <html lang="en">
     <head><title>Admin Support Center</title></head>
@@ -904,15 +948,35 @@ def admin_tickets():
         <div style="display:grid; grid-template-columns: 320px 1fr; gap:20px; margin-top:20px;">
             <div style="background:#111827; padding:15px; border-radius:10px; border:1px solid #1e293b;">
                 <h4>All Tickets</h4>
-                {ticket_list_html if ticket_list_html else '<p style="color:#94a3b8; font-size:13px;">No tickets found.</p>'}
+                {% if tickets %}
+                    {% for tid, data in tickets.items() %}
+                    <a href="/admin/tickets?tid={{ tid }}" style="display:block; padding:10px; margin:6px 0; background:#1e293b; color:#38bdf8; text-decoration:none; border-radius:6px; font-size:13px;">Ticket: {{ tid }} (User: {{ data.user }})</a>
+                    {% endfor %}
+                {% else %}
+                    <p style="color:#94a3b8; font-size:13px;">No tickets found.</p>
+                {% endif %}
             </div>
             <div style="background:#111827; padding:15px; border-radius:10px; border:1px solid #1e293b;">
-                {chat_box_html}
+                {% if selected_tid and selected_tid in tickets %}
+                    <h4>Messenger Chat for Ticket: {{ selected_tid }}</h4>
+                    <div style="background:#060913; height:260px; overflow-y:auto; border:1px solid #1e293b; padding:10px; border-radius:6px; margin-bottom:12px;">
+                        {% for m in tickets[selected_tid].messages %}
+                        <div style='background:#060913; padding:8px 12px; margin:6px 0; border-radius:6px; font-size:13px;'>{{ m }}</div>
+                        {% endfor %}
+                    </div>
+                    <form method="POST">
+                        <input type="hidden" name="tid" value="{{ selected_tid }}">
+                        <input type="text" name="reply" placeholder="Type reply as admin..." required style="width:78%; padding:10px; background:#060913; border:1px solid #334155; color:white; border-radius:6px;">
+                        <button type="submit" style="width:20%; padding:10px; background:#0ea5e9; border:none; font-weight:bold; color:white; border-radius:6px; cursor:pointer;">Send</button>
+                    </form>
+                {% else %}
+                    <p style='color:#94a3b8;'>Select a ticket from the left list to view and reply.</p>
+                {% endif %}
             </div>
         </div>
     </body>
     </html>
-    """)
+    """, tickets=tickets, selected_tid=selected_tid)
 
 # --- 3. CLIENT PANEL ---
 @app.route("/client-login", methods=["GET", "POST"])
@@ -935,7 +999,7 @@ def client_login():
         else:
             error_msg = "Invalid or Blocked License ID!"
 
-    return render_template_string(f"""
+    return render_template_string("""
     <!DOCTYPE html>
     <html lang="en">
     <head><title>Client Portal Login</title></head>
@@ -943,7 +1007,7 @@ def client_login():
         <div style="background:#111827; padding:35px; border-radius:12px; width:360px; border:1px solid #1e293b;">
             <h2>Client Portal Login</h2>
             <p style="font-size:13px; color:#94a3b8;">Enter License ID, Username & Password.</p>
-            {f'<div style="color:#fca5a5; font-size:13px; margin-bottom:10px;">{error_msg}</div>' if error_msg else ''}
+            {% if error_msg %}<div style="color:#fca5a5; font-size:13px; margin-bottom:10px;">{{ error_msg }}</div>{% endif %}
             <form method="POST">
                 <label style="font-size:12px; color:#94a3b8;">License ID</label>
                 <input type="text" name="lic_key" required style="width:100%; padding:10px; margin:5px 0 12px 0; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
@@ -957,7 +1021,7 @@ def client_login():
         </div>
     </body>
     </html>
-    """)
+    """, error_msg=error_msg)
 
 @app.route("/client-dashboard", methods=["GET", "POST"])
 def client_dashboard():
@@ -977,7 +1041,6 @@ def client_dashboard():
             msg_status = "🛡️ Antivirus & Cloud Protection successfully activated on your allowed devices!"
             antivirus_active = True
         
-        # --- নতুন সংযোজন: ক্লায়েন্ট পোর্টালের ভেতর থেকে ইউজারনেম এবং পাসওয়ার্ড পরিবর্তনের হ্যান্ডলার ---
         elif action == "update_client_credentials":
             new_c_user = request.form.get("new_client_user", "").strip()
             new_c_pwd = request.form.get("new_client_pwd", "").strip()
@@ -998,41 +1061,40 @@ def client_dashboard():
 
     tickets = load_tickets()
     my_msgs = tickets.get(f"TICK-{lic_key}", {}).get("messages", [])
-    chat_history = "".join([f"<div style='background:#111827; padding:8px 12px; margin:6px 0; border-radius:6px; font-size:13px;'>{m}</div>" for m in my_msgs])
 
-    return render_template_string(f"""
+    return render_template_string("""
     <!DOCTYPE html>
     <html lang="en">
     <head><title>Client Security Dashboard</title></head>
     <body style="font-family:'Segoe UI'; background:#060913; color:white; padding:20px;">
         <div style="max-width:650px; margin:0 auto; background:#111827; padding:30px; border-radius:12px; border:1px solid #1e293b;">
             <h2>🛡️ Client Security Dashboard</h2>
-            <p>License Key: <code style="color:#38bdf8;">{lic_key}</code> | Organization: <b>{v['org']} ({v['name']})</b></p>
-            <p>Active Plan Tier: <b style="color:#38bdf8;">{v['plan']}</b> | Expiry Date: {v['expiry']}</p>
+            <p>License Key: <code style="color:#38bdf8;">{{ lic_key }}</code> | Organization: <b>{{ v.org }} ({{ v.name }})</b></p>
+            <p>Active Plan Tier: <b style="color:#38bdf8;">{{ v.plan }}</b> | Expiry Date: {{ v.expiry }}</p>
             
             <!-- Antivirus Activation Section -->
-            <div style="background:var(--bg-secondary, #0b1120); border:1px solid #1e293b; padding:15px; border-radius:8px; margin:20px 0; text-align:center;">
+            <div style="background:#0b1120; border:1px solid #1e293b; padding:15px; border-radius:8px; margin:20px 0; text-align:center;">
                 <h4 style="margin:0 0 8px 0; color:#38bdf8;">Device Protection Status</h4>
                 <p style="font-size:13px; color:#94a3b8; margin:0 0 12px 0;">
-                    {'✅ Antivirus is Active & Protecting your devices.' if antivirus_active else '⚠️ Antivirus protection is currently pending activation.'}
+                    {% if antivirus_active %}✅ Antivirus is Active & Protecting your devices.{% else %}⚠️ Antivirus protection is currently pending activation.{% endif %}
                 </p>
                 <form method="POST">
                     <input type="hidden" name="action" value="activate_antivirus">
-                    <button type="submit" style="background:{'#10b981' if not antivirus_active else '#0284c7'}; color:white; padding:12px 24px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px;">
-                        {'🛡️ Click Here to Activate Antivirus & Cloud Protection' if not antivirus_active else '🔄 Re-Verify & Sync Antivirus Protection'}
+                    <button type="submit" style="background:{% if not antivirus_active %}#10b981{% else %}#0284c7{% endif %}; color:white; padding:12px 24px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px;">
+                        {% if not antivirus_active %}🛡️ Click Here to Activate Antivirus & Cloud Protection{% else %}🔄 Re-Verify & Sync Antivirus Protection{% endif %}
                     </button>
                 </form>
             </div>
 
             <!-- Client Credentials Update Section -->
-            <div style="background:var(--bg-secondary, #0b1120); border:1px solid #1e293b; padding:15px; border-radius:8px; margin:20px 0;">
+            <div style="background:#0b1120; border:1px solid #1e293b; padding:15px; border-radius:8px; margin:20px 0;">
                 <h4 style="margin:0 0 8px 0; color:#38bdf8;">Change Portal Credentials</h4>
                 <form method="POST">
                     <input type="hidden" name="action" value="update_client_credentials">
                     <label style="font-size:12px; color:#94a3b8;">New Username</label>
-                    <input type="text" name="new_client_user" value="{v.get('client_user', 'admin')}" required style="width:100%; padding:10px; margin:5px 0 10px 0; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
+                    <input type="text" name="new_client_user" value="{{ v.get('client_user', 'admin') }}" required style="width:100%; padding:10px; margin:5px 0 10px 0; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
                     <label style="font-size:12px; color:#94a3b8;">New Password</label>
-                    <input type="password" name="new_client_pwd" value="{v.get('client_pwd', 'admin')}" required style="width:100%; padding:10px; margin:5px 0 15px 0; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
+                    <input type="password" name="new_client_pwd" value="{{ v.get('client_pwd', 'admin') }}" required style="width:100%; padding:10px; margin:5px 0 15px 0; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
                     <button type="submit" style="width:100%; padding:10px; background:#0ea5e9; border:none; color:white; font-weight:bold; border-radius:6px; cursor:pointer;">Update Credentials</button>
                 </form>
             </div>
@@ -1040,10 +1102,16 @@ def client_dashboard():
             <hr style="border-color:#1e293b; margin:20px 0;">
             
             <h3>💬 Private Support Messenger</h3>
-            {f'<div style="background:rgba(16,185,129,0.1); border:1px solid #10b981; color:#34d399; padding:10px; border-radius:6px; font-size:13px; margin-bottom:12px;">{msg_status}</div>' if msg_status else ''}
+            {% if msg_status %}<div style="background:rgba(16,185,129,0.1); border:1px solid #10b981; color:#34d399; padding:10px; border-radius:6px; font-size:13px; margin-bottom:12px;">{{ msg_status }}</div>{% endif %}
             
             <div style="background:#060913; height:180px; overflow-y:auto; border:1px solid #1e293b; padding:10px; border-radius:6px; margin-bottom:12px;">
-                {chat_history if chat_history else '<p style="color:#94a3b8; font-size:13px;">No messages yet. Send a message to contact admins.</p>'}
+                {% if my_msgs %}
+                    {% for m in my_msgs %}
+                    <div style='background:#111827; padding:8px 12px; margin:6px 0; border-radius:6px; font-size:13px;'>{{ m }}</div>
+                    {% endfor %}
+                {% else %}
+                    <p style="color:#94a3b8; font-size:13px;">No messages yet. Send a message to contact admins.</p>
+                {% endif %}
             </div>
             
             <form method="POST">
@@ -1055,7 +1123,7 @@ def client_dashboard():
         </div>
     </body>
     </html>
-    """)
+    """, lic_key=lic_key, v=v, antivirus_active=antivirus_active, msg_status=msg_status, my_msgs=my_msgs)
 
 # --- Dedicated Ticket Chat Route for ISS Social Users ---
 @app.route("/ticket-chat", methods=["GET", "POST"])
@@ -1074,21 +1142,26 @@ def ticket_chat():
 
     tickets = load_tickets()
     my_msgs = tickets.get(t_id, {}).get("messages", [])
-    chat_history = "".join([f"<div style='background:#111827; padding:8px 12px; margin:6px 0; border-radius:6px; font-size:13px;'>{m}</div>" for m in my_msgs])
 
-    return render_template_string(f"""
+    return render_template_string("""
     <!DOCTYPE html>
     <html lang="en">
     <head><title>Support Ticket Chat</title></head>
     <body style="font-family:'Segoe UI'; background:#060913; color:white; padding:20px;">
         <div style="max-width:650px; margin:30px auto; background:#111827; padding:30px; border-radius:12px; border:1px solid #1e293b;">
-            <h2>💬 Support Ticket Chat ({current_user})</h2>
+            <h2>💬 Support Ticket Chat ({{ current_user }})</h2>
             <p style="font-size:13px; color:#94a3b8;">Only you and the administrators can view this private conversation.</p>
             <a href="/" style="color:#38bdf8; font-size:13px; text-decoration:none;">&larr; Return Home</a>
             <hr style="border-color:#1e293b; margin:15px 0;">
 
             <div style="background:#060913; height:240px; overflow-y:auto; border:1px solid #1e293b; padding:10px; border-radius:6px; margin-bottom:12px;">
-                {chat_history if chat_history else '<p style="color:#94a3b8; font-size:13px;">No messages in this ticket yet.</p>'}
+                {% if my_msgs %}
+                    {% for m in my_msgs %}
+                    <div style='background:#111827; padding:8px 12px; margin:6px 0; border-radius:6px; font-size:13px;'>{{ m }}</div>
+                    {% endfor %}
+                {% else %}
+                    <p style="color:#94a3b8; font-size:13px;">No messages in this ticket yet.</p>
+                {% endif %}
             </div>
 
             <form method="POST">
@@ -1098,7 +1171,7 @@ def ticket_chat():
         </div>
     </body>
     </html>
-    """)
+    """, current_user=current_user, my_msgs=my_msgs, msg_status=msg_status)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
