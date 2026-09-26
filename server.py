@@ -480,7 +480,7 @@ def my_profile():
                     msg = f"✅ Trusted Black Badge status updated for '{target_user}'!"
 
     current_user = session.get("username")
-    users = load_users() # reload fresh users after POST
+    users = load_users() 
     user_data = users.get(current_user) if current_user else None
     
     view_user_name = request.args.get("user", current_user)
@@ -646,7 +646,7 @@ def admin_panel():
             l_name = request.form.get("l_name")
             l_org = request.form.get("l_org")
             l_expiry = request.form.get("l_expiry", "2027-01-01")
-            l_plan = request.form.get("l_plan", "Enterprise")
+            l_plan = request.form.get("l_plan", "Basic")
             l_user = request.form.get("l_user", "admin")
             l_pwd = request.form.get("l_pwd", "admin")
             
@@ -725,16 +725,17 @@ def admin_panel():
         </div>
 
         <div class="box">
-            <h3>🔑 License Management (Create with Plan Tier & Expiry)</h3>
+            <h3>🔑 License Management (Select Plan Tier: Basic - 2 Devices | Family - 5 Devices | Standard - 10 Devices | Business - Unlimited)</h3>
             <form method="POST" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:15px;">
                 <input type="hidden" name="action" value="add_license">
                 <input type="text" name="l_key" placeholder="License Key" required>
                 <input type="text" name="l_name" placeholder="Client Name" required>
                 <input type="text" name="l_org" placeholder="Organization" required>
                 <select name="l_plan">
-                    <option value="Enterprise">Enterprise Plan</option>
-                    <option value="Professional">Professional Plan</option>
-                    <option value="Standard">Standard Plan</option>
+                    <option value="Basic (2 Devices)">Basic (2 Devices)</option>
+                    <option value="Family (5 Devices)">Family (5 Devices)</option>
+                    <option value="Standard (10 Devices)">Standard (10 Devices)</option>
+                    <option value="Business (Unlimited)">Business (Unlimited)</option>
                 </select>
                 <input type="text" name="l_expiry" placeholder="Expiry (YYYY-MM-DD)" value="2027-01-01" required>
                 <input type="text" name="l_user" placeholder="Client User" value="admin" required>
@@ -742,7 +743,7 @@ def admin_panel():
                 <button type="submit" style="grid-column: 1 / -1;">Create License</button>
             </form>
             <table>
-                <tr><th>Key</th><th>Client</th><th>Org</th><th>Plan Tier</th><th>Expiry</th><th>Client Credentials</th><th>Action</th></tr>
+                <tr><th>Key</th><th>Client</th><th>Org</th><th>Plan Tier (Device Limit)</th><th>Expiry</th><th>Client Credentials</th><th>Action</th></tr>
                 {"".join([f'<tr><td><code>{k}</code></td><td>{v["name"]}</td><td>{v["org"]}</td><td><b>{v["plan"]}</b></td><td>{v["expiry"]}</td><td><code>{v.get("client_user","admin")} / {v.get("client_pwd","admin")}</code></td><td><form method="POST" style="margin:0;"><input type="hidden" name="action" value="delete_license"><input type="hidden" name="lic_key" value="{k}"><button type="submit" style="background:#ef4444; padding:4px 8px; font-size:11px;">Delete / Block</button></form></td></tr>' for k, v in licenses.items()]) if licenses else '<tr><td colspan="7" style="text-align:center; color:#94a3b8;">No licenses found.</td></tr>'}
             </table>
         </div>
