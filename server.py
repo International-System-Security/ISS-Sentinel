@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = "iss_enterprise_security_secret_key_v24"
+app.secret_key = "iss_enterprise_security_secret_key_v25"
 
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -19,7 +19,6 @@ ADMIN_LIST_FILE = "admins.txt"
 
 OWNER_EMAIL = "ibrahim@iss.com"
 
-# Exact Verified Blue Badge SVG for Admins
 ADMIN_BADGE_SVG = '''
 <svg width="16" height="16" viewBox="0 0 24 24" fill="#0ea5e9" style="vertical-align: middle; margin-left: 4px;" title="Verified Admin">
     <path d="M12 2L14.34 3.73L17.25 3.5L18.77 6.04L21.5 7.15L21.57 10.12L23.75 12.12L22.12 14.75L22.5 17.75L19.75 19L18.38 21.62L15.5 21.37L13.38 23.25L10.62 22.25L8.12 23.37L6.38 21.12L3.62 20.37L3.12 17.5L0.87 15.62L2.12 12.87L0.87 10.12L3.12 8.25L3.87 5.5L6.62 5.12L8.5 2.87L11.25 3.87L12 2Z" fill="#0ea5e9"/>
@@ -76,7 +75,7 @@ def load_users():
                 if len(parts) >= 8:
                     uname = parts[0].strip()
                     email = parts[1].strip()
-                    if email in admin_emails or uname in admin_usernames:
+                    if email in admin_emails:
                         continue
                     users[uname] = {
                         "email": email, "password": parts[2].strip(),
@@ -87,7 +86,7 @@ def load_users():
                 elif len(parts) >= 6:
                     uname = parts[0].strip()
                     email = parts[1].strip()
-                    if email in admin_emails or uname in admin_usernames:
+                    if email in admin_emails:
                         continue
                     users[uname] = {
                         "email": email, "password": parts[2].strip(),
@@ -110,9 +109,8 @@ def save_all_users(users_dict):
     with open(USER_FILE, "w") as f:
         admin_data = load_admin_data()
         admin_emails = set(admin_data.keys())
-        admin_usernames = set(d["username"] for d in admin_data.values())
         for uname, data in users_dict.items():
-            if data['email'] in admin_emails or uname in admin_usernames or data['role'] == 'Admin':
+            if data['email'] in admin_emails or data['role'] == 'Admin':
                 continue
             f.write(f"{uname}|||{data['email']}|||{data['password']}|||{data['role']}|||{data['pic']}|||{data['verified']}|||{data['trusted']}|||{data.get('last_active', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))}\n")
 
@@ -593,7 +591,8 @@ def my_profile():
             {% endif %}
 
             <div style="text-align:center; margin-top:25px;">
-                <a href="/logout" style="color:#ef4444; font-weight:bold; font-size:14px; text-decoration:none;">Log Out Account</a>
+                <a href="/my-profile" style="background:#1e293b; color:white; padding:10px 20px; border-radius:6px; text-decoration:none; display:inline-block; margin-bottom:15px; font-weight:bold;">Refresh Profile View</a>
+                <br><a href="/logout" style="color:#ef4444; font-weight:bold; font-size:14px; text-decoration:none;">Log Out Account</a>
                 {% if user_data['role'] == 'Admin' %}
                 <br><br><a href="/admin" style="color:#38bdf8; font-weight:bold; text-decoration:none;">Go to Admin Control Panel &rarr;</a>
                 {% endif %}
