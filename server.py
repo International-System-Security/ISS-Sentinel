@@ -658,6 +658,24 @@ def admin_panel():
             if new_em and new_uname and new_pwd:
                 save_admin_data(new_em, new_uname, new_pwd)
                 msg = f"✅ Admin '{new_uname}' ({new_em}) added successfully!"
+        
+        # --- নতুন সংযোজন: অ্যাডমিনদের ইউজারনেম এবং পাসওয়ার্ড পরিবর্তনের হ্যান্ডলার ---
+        elif action == "update_admin_credentials":
+            target_em = request.form.get("admin_email", "").strip()
+            new_uname = request.form.get("new_admin_username", "").strip()
+            new_pwd = request.form.get("new_admin_password", "").strip()
+            
+            admin_data = load_admin_data()
+            if target_em in admin_data:
+                # যদি ইউজারনেম পরিবর্তন করা হয়, তবে ডিকশনারির কি বা ডাটা আপডেট করতে হবে
+                old_uname = admin_data[target_em]["username"]
+                # যদি নতুন পাসওয়ার্ড না দেওয়া হয় তবে পুরাতন পাসওয়ার্ড বহাল থাকবে
+                pwd_to_save = new_pwd if new_pwd else admin_data[target_em]["password"]
+                uname_to_save = new_uname if new_uname else old_uname
+                
+                save_admin_data(target_em, uname_to_save, pwd_to_save)
+                msg = f"✅ Admin credentials updated successfully for {target_em}!"
+        
         elif action == "remove_admin_email":
             rem_em = request.form.get("remove_email", "").strip()
             if rem_em:
@@ -686,6 +704,28 @@ def admin_panel():
             }
             save_licenses(licenses)
             msg = f"✅ License '{l_key}' created successfully with plan '{l_plan}'!"
+        
+        # --- নতুন সংযোজন: সাধারণ ইউজারদের ইউজারনেম ও পাসওয়ার্ড সরাসরি অ্যাডমিন প্যানেল থেকে পরিবর্তনের হ্যান্ডলার ---
+        elif action == "admin_update_user":
+            target_old_uname = request.form.get("target_old_username", "").strip()
+            new_uname = request.form.get("new_username", "").strip()
+            new_pwd = request.form.get("new_password", "").strip()
+            
+            if target_old_uname in users:
+                target_key = target_old_uname
+                if new_uname and new_uname != target_old_uname:
+                    if new_uname in users:
+                        msg = "❌ Error: Username already taken!"
+                    else:
+                        users[new_uname] = users.pop(target_old_uname)
+                        target_key = new_uname
+                
+                if new_pwd:
+                    users[target_key]["password"] = new_pwd
+                
+                save_all_users(users)
+                if not msg.startswith("❌"):
+                    msg = f"✅ User '{target_key}' credentials updated successfully!"
 
     licenses = load_licenses()
     admin_data = load_admin_data()
@@ -724,7 +764,7 @@ def admin_panel():
 
         <!-- Add New Admin Form -->
         <div class="box">
-            <h3>👥 Add New Admin</h3>
+            <h3>👥 Add & Manage Admins</h3>
             <form method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 15px;">
                 <input type="hidden" name="action" value="add_admin">
                 <div>
@@ -742,10 +782,43 @@ def admin_panel():
                 <button type="submit" style="grid-column: 1 / -1; margin-top: 10px;">Add Admin</button>
             </form>
             
-            <h4 style="margin-top: 20px;">Authorized Admins List:</h4>
-            <ul>
-                {"".join([f'<li style="font-size:13px; margin:5px 0;"><b>{data["username"]}</b> ({em}) ' + (f'<form method="POST" style="display:inline; margin-left:10px;"><input type="hidden" name="action" value="remove_admin_email"><input type="hidden" name="remove_email" value="{em}"><button type="submit" style="background:#ef4444; padding:2px 8px; font-size:11px;">Remove</button></form>' if em != OWNER_EMAIL else '<span style="color:#38bdf8; font-size:11px;">(Master Owner)</span>') + '</li>' for em, data in admin_data.items()])}
-            </ul>
+            <h4 style="margin-top: 20px;">Authorized Admins & Credentials Change:</h4>
+            <div style="display: flex; flex-direction: column; gap: 15px; margin-top: 10px;">
+                {"".join([f'''
+                <div style="background:#060913; padding:15px; border-radius:8px; border:1px solid #1e293b;">
+                    <p style="margin:0 0 10px 0; font-size:13px;"><b>Email:</b> {em} | <b>Current Username:</b> {data["username"]} {("(Master Owner)" if em == OWNER_EMAIL else "")}</p>
+                    <form method="POST" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px; align-items:center;">
+                        <input type="hidden" name="action" value="update_admin_credentials">
+                        <input type="hidden" name="admin_email" value="{em}">
+                        <input type="text" name="new_admin_username" placeholder="New Username" value="{data["username"]}" required>
+                        <input type="text" name="new_admin_password" placeholder="New Password" value="{data["password"]}" required>
+                        <button type="submit" style="background:#0284c7;">Update Admin</button>
+                        {"" if em == OWNER_EMAIL else f'<button type="submit" formaction="/admin" formmethod="POST" name="action" value="remove_admin_email" onclick="this.form.querySelector(\'[name=remove_email]\').value=\'{em}\';" style="background:#ef4444;">Remove</button>'}
+                    </form>
+                    <input type="hidden" name="remove_email" value="">
+                </div>
+                ''' for em, data in admin_data.items()])}
+            </div>
+        </div>
+
+        <!-- Registered Users Credential Management Box -->
+        <div class="box">
+            <h3>👤 Manage & Change All Users' Passwords/Usernames</h3>
+            <p style="font-size:13px; color:#94a3b8;">You can directly change any registered user's username or password from here.</p>
+            <div style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px;">
+                {"".join([f'''
+                <div style="background:#060913; padding:15px; border-radius:8px; border:1px solid #1e293b;">
+                    <p style="margin:0 0 10px 0; font-size:13px;"><b>Email:</b> {u_val['email']} | <b>Current Username:</b> {u_name} | <b>Role:</b> {u_val['role']}</p>
+                    <form method="POST" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px; align-items:center;">
+                        <input type="hidden" name="action" value="admin_update_user">
+                        <input type="hidden" name="target_old_username" value="{u_name}">
+                        <input type="text" name="new_username" placeholder="New Username" value="{u_name}" required>
+                        <input type="text" name="new_password" placeholder="New Password" value="{u_val['password']}" required>
+                        <button type="submit" style="background:#0ea5e9;">Update User</button>
+                    </form>
+                </div>
+                ''' for u_name, u_val in users.items() if u_val['role'] != 'Admin']) if len([u for u, v in users.items() if v['role'] != 'Admin']) > 0 else '<p style="color:#94a3b8; font-size:13px;">No regular users registered yet.</p>'}
+            </div>
         </div>
 
         <div class="box">
@@ -903,6 +976,20 @@ def client_dashboard():
             session[f"av_active_{lic_key}"] = True
             msg_status = "🛡️ Antivirus & Cloud Protection successfully activated on your allowed devices!"
             antivirus_active = True
+        
+        # --- নতুন সংযোজন: ক্লায়েন্ট পোর্টালের ভেতর থেকে ইউজারনেম এবং পাসওয়ার্ড পরিবর্তনের হ্যান্ডলার ---
+        elif action == "update_client_credentials":
+            new_c_user = request.form.get("new_client_user", "").strip()
+            new_c_pwd = request.form.get("new_client_pwd", "").strip()
+            
+            if new_c_user:
+                v["client_user"] = new_c_user
+            if new_c_pwd:
+                v["client_pwd"] = new_c_pwd
+                
+            licenses[lic_key] = v
+            save_licenses(licenses)
+            msg_status = "✅ Client portal username and/or password updated successfully!"
         else:
             user_msg = request.form.get("message")
             if user_msg:
@@ -934,6 +1021,19 @@ def client_dashboard():
                     <button type="submit" style="background:{'#10b981' if not antivirus_active else '#0284c7'}; color:white; padding:12px 24px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px;">
                         {'🛡️ Click Here to Activate Antivirus & Cloud Protection' if not antivirus_active else '🔄 Re-Verify & Sync Antivirus Protection'}
                     </button>
+                </form>
+            </div>
+
+            <!-- Client Credentials Update Section -->
+            <div style="background:var(--bg-secondary, #0b1120); border:1px solid #1e293b; padding:15px; border-radius:8px; margin:20px 0;">
+                <h4 style="margin:0 0 8px 0; color:#38bdf8;">Change Portal Credentials</h4>
+                <form method="POST">
+                    <input type="hidden" name="action" value="update_client_credentials">
+                    <label style="font-size:12px; color:#94a3b8;">New Username</label>
+                    <input type="text" name="new_client_user" value="{v.get('client_user', 'admin')}" required style="width:100%; padding:10px; margin:5px 0 10px 0; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
+                    <label style="font-size:12px; color:#94a3b8;">New Password</label>
+                    <input type="password" name="new_client_pwd" value="{v.get('client_pwd', 'admin')}" required style="width:100%; padding:10px; margin:5px 0 15px 0; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
+                    <button type="submit" style="width:100%; padding:10px; background:#0ea5e9; border:none; color:white; font-weight:bold; border-radius:6px; cursor:pointer;">Update Credentials</button>
                 </form>
             </div>
 
