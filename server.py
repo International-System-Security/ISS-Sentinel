@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = "iss_enterprise_security_secret_key_v17"
+app.secret_key = "iss_enterprise_security_secret_key_v18"
 
 UPLOAD_FOLDER = 'static/uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -71,7 +71,7 @@ def load_users():
     users = {}
     admin_data = load_admin_data()
     admin_emails = set(admin_data.keys())
-
+    
     if os.path.exists(USER_FILE):
         with open(USER_FILE, "r") as f:
             for line in f:
@@ -102,7 +102,7 @@ def load_users():
                         "verified": verified, "trusted": False,
                         "last_active": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     }
-
+    
     for em, data in admin_data.items():
         uname = data["username"]
         pwd = data["password"]
@@ -222,7 +222,7 @@ def home():
     users = load_users()
     posts = load_posts()
     inquiry_msg = ""
-
+    
     search_query = request.args.get("search", "").strip()
     filtered_users = {u: d for u, d in users.items() if search_query.lower() in u.lower()} if search_query else users
 
@@ -306,28 +306,49 @@ def home():
             <!-- Membership & Device Plans Info Section -->
             <div class="card" id="plans">
                 <h3>📦 Membership & Device Plans</h3>
-                <p style="font-size: 13px; color: var(--text-muted);">Choose the right security tier for your devices and business needs:</p>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-top: 15px;">
+                <p style="font-size: 13px; color: var(--text-muted);">Choose the right security tier for your devices. Yearly plans come with a special <b style="color:#34d399;">15% OFF</b>!</p>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                    
                     <div style="background:var(--bg-secondary); padding:15px; border-radius:8px; border:1px solid var(--border-color);">
                         <h4 style="margin:0 0 5px 0; color:#38bdf8;">Basic Plan</h4>
                         <span style="font-size:12px; color:var(--accent-blue); font-weight:bold;">Limit: 2 Devices</span>
-                        <p style="font-size:11px; color:var(--text-muted); margin:8px 0 0 0;">Ideal for single user or small personal setup.</p>
+                        <div style="margin-top: 10px; font-size: 13px;">
+                            <div>Monthly: <b>$5 (৳490)</b></div>
+                            <div style="color:#34d399; margin-top: 3px;">Yearly: <b>$51 (৳4,990)</b> <span style="font-size:10px; background:rgba(16,185,129,0.2); padding:2px 5px; border-radius:4px;">15% OFF</span></div>
+                        </div>
+                        <p style="font-size:11px; color:var(--text-muted); margin:8px 0 0 0;">Ideal for single user.</p>
                     </div>
+
                     <div style="background:var(--bg-secondary); padding:15px; border-radius:8px; border:1px solid var(--border-color);">
                         <h4 style="margin:0 0 5px 0; color:#38bdf8;">Family Plan</h4>
                         <span style="font-size:12px; color:var(--accent-blue); font-weight:bold;">Limit: 5 Devices</span>
-                        <p style="font-size:11px; color:var(--text-muted); margin:8px 0 0 0;">Perfect for family members and multi-device safety.</p>
+                        <div style="margin-top: 10px; font-size: 13px;">
+                            <div>Monthly: <b>$10 (৳990)</b></div>
+                            <div style="color:#34d399; margin-top: 3px;">Yearly: <b>$102 (৳9,990)</b> <span style="font-size:10px; background:rgba(16,185,129,0.2); padding:2px 5px; border-radius:4px;">15% OFF</span></div>
+                        </div>
+                        <p style="font-size:11px; color:var(--text-muted); margin:8px 0 0 0;">Perfect for family safety.</p>
                     </div>
+
                     <div style="background:var(--bg-secondary); padding:15px; border-radius:8px; border:1px solid var(--border-color);">
                         <h4 style="margin:0 0 5px 0; color:#38bdf8;">Standard Plan</h4>
                         <span style="font-size:12px; color:var(--accent-blue); font-weight:bold;">Limit: 10 Devices</span>
-                        <p style="font-size:11px; color:var(--text-muted); margin:8px 0 0 0;">Designed for growing teams and professionals.</p>
+                        <div style="margin-top: 10px; font-size: 13px;">
+                            <div>Monthly: <b>$20 (৳1,990)</b></div>
+                            <div style="color:#34d399; margin-top: 3px;">Yearly: <b>$204 (৳19,900)</b> <span style="font-size:10px; background:rgba(16,185,129,0.2); padding:2px 5px; border-radius:4px;">15% OFF</span></div>
+                        </div>
+                        <p style="font-size:11px; color:var(--text-muted); margin:8px 0 0 0;">For growing teams.</p>
                     </div>
+
                     <div style="background:var(--bg-secondary); padding:15px; border-radius:8px; border:1px solid var(--border-color);">
                         <h4 style="margin:0 0 5px 0; color:#38bdf8;">Business Plan</h4>
                         <span style="font-size:12px; color:var(--accent-blue); font-weight:bold;">Limit: Unlimited</span>
-                        <p style="font-size:11px; color:var(--text-muted); margin:8px 0 0 0;">Enterprise-grade security with zero restrictions.</p>
+                        <div style="margin-top: 10px; font-size: 13px;">
+                            <div>Monthly: <b>$50 (৳4,990)</b></div>
+                            <div style="color:#34d399; margin-top: 3px;">Yearly: <b>$510 (৳49,900)</b> <span style="font-size:10px; background:rgba(16,185,129,0.2); padding:2px 5px; border-radius:4px;">15% OFF</span></div>
+                        </div>
+                        <p style="font-size:11px; color:var(--text-muted); margin:8px 0 0 0;">Enterprise grade.</p>
                     </div>
+
                 </div>
             </div>
 
@@ -432,7 +453,7 @@ def my_profile():
             else:
                 role = "Admin" if (email in admin_data or email == OWNER_EMAIL) else "User"
                 is_verified = True if role == "Admin" else False
-
+                
                 users[uname] = {
                     "email": email, "password": pwd, "role": role, "pic": pic,
                     "verified": is_verified, "trusted": False,
@@ -453,7 +474,7 @@ def my_profile():
                 session["username"] = uname
                 users[uname]["last_active"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 save_all_users(users)
-
+                
                 if users[uname]["role"] == "Admin":
                     return redirect(url_for("admin_panel"))
                 return redirect(url_for("my_profile"))
@@ -495,7 +516,7 @@ def my_profile():
                         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                         users[curr_user]["pic"] = f"/static/uploads/{filename}"
                         save_all_users(users)
-                        msg = "✅ Profile picture uploaded successfully from gallery!"
+                        msg = "✅ Profile picture uploaded successfully!"
                     else:
                         error = "Please select an image file to upload."
 
@@ -511,7 +532,7 @@ def my_profile():
     current_user = session.get("username")
     users = load_users() 
     user_data = users.get(current_user) if current_user else None
-
+    
     view_user_name = request.args.get("user", current_user)
     view_data = users.get(view_user_name)
 
@@ -675,10 +696,10 @@ def admin_panel():
             l_name = request.form.get("l_name")
             l_org = request.form.get("l_org")
             l_expiry = request.form.get("l_expiry", "2027-01-01")
-            l_plan = request.form.get("l_plan", "Basic (2 Devices)")
+            l_plan = request.form.get("l_plan", "Basic")
             l_user = request.form.get("l_user", "admin")
             l_pwd = request.form.get("l_pwd", "admin")
-
+            
             licenses = load_licenses()
             licenses[l_key] = {
                 "name": l_name, "org": l_org, "expiry": l_expiry,
@@ -754,17 +775,17 @@ def admin_panel():
         </div>
 
         <div class="box">
-            <h3>🔑 License Management (Select Plan Tier)</h3>
+            <h3>🔑 License Management (Select Plan Tier: Basic - 2 Devices | Family - 5 Devices | Standard - 10 Devices | Business - Unlimited)</h3>
             <form method="POST" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:15px;">
                 <input type="hidden" name="action" value="add_license">
                 <input type="text" name="l_key" placeholder="License Key" required>
                 <input type="text" name="l_name" placeholder="Client Name" required>
                 <input type="text" name="l_org" placeholder="Organization" required>
                 <select name="l_plan">
-                    <option value="Basic Plan (Limit: 2 Devices)">Basic Plan (Limit: 2 Devices)</option>
-                    <option value="Family Plan (Limit: 5 Devices)">Family Plan (Limit: 5 Devices)</option>
-                    <option value="Standard Plan (Limit: 10 Devices)">Standard Plan (Limit: 10 Devices)</option>
-                    <option value="Business Plan (Limit: Unlimited Devices)">Business Plan (Limit: Unlimited Devices)</option>
+                    <option value="Basic (2 Devices)">Basic (2 Devices)</option>
+                    <option value="Family (5 Devices)">Family (5 Devices)</option>
+                    <option value="Standard (10 Devices)">Standard (10 Devices)</option>
+                    <option value="Business (Unlimited)">Business (Unlimited)</option>
                 </select>
                 <input type="text" name="l_expiry" placeholder="Expiry (YYYY-MM-DD)" value="2027-01-01" required>
                 <input type="text" name="l_user" placeholder="Client User" value="admin" required>
@@ -772,7 +793,7 @@ def admin_panel():
                 <button type="submit" style="grid-column: 1 / -1;">Create License</button>
             </form>
             <table>
-                <tr><th>Key</th><th>Client</th><th>Org</th><th>Plan Tier & Device Limit</th><th>Expiry</th><th>Credentials</th><th>Action</th></tr>
+                <tr><th>Key</th><th>Client</th><th>Org</th><th>Plan Tier (Device Limit)</th><th>Expiry</th><th>Client Credentials</th><th>Action</th></tr>
                 {"".join([f'<tr><td><code>{k}</code></td><td>{v["name"]}</td><td>{v["org"]}</td><td><b>{v["plan"]}</b></td><td>{v["expiry"]}</td><td><code>{v.get("client_user","admin")} / {v.get("client_pwd","admin")}</code></td><td><form method="POST" style="margin:0;"><input type="hidden" name="action" value="delete_license"><input type="hidden" name="lic_key" value="{k}"><button type="submit" style="background:#ef4444; padding:4px 8px; font-size:11px;">Delete / Block</button></form></td></tr>' for k, v in licenses.items()]) if licenses else '<tr><td colspan="7" style="text-align:center; color:#94a3b8;">No licenses found.</td></tr>'}
             </table>
         </div>
@@ -806,7 +827,7 @@ def admin_tickets():
             return redirect(url_for('admin_tickets', tid=t_id))
 
     ticket_list_html = "".join([f'<a href="/admin/tickets?tid={tid}" style="display:block; padding:10px; margin:6px 0; background:#1e293b; color:#38bdf8; text-decoration:none; border-radius:6px; font-size:13px;">Ticket: {tid} (User: {data["user"]})</a>' for tid, data in tickets.items()])
-
+    
     chat_box_html = "<p style='color:#94a3b8;'>Select a ticket from the left list to view and reply.</p>"
     if selected_tid and selected_tid in tickets:
         t_data = tickets[selected_tid]
@@ -849,7 +870,7 @@ def client_login():
         lic_key = request.form.get("lic_key", "").strip()
         c_user = request.form.get("c_user", "").strip()
         c_pwd = request.form.get("c_pwd", "").strip()
-
+        
         licenses = load_licenses()
         if lic_key in licenses:
             stored_user = licenses[lic_key].get("client_user", "admin")
@@ -895,19 +916,11 @@ def client_dashboard():
 
     v = licenses[lic_key]
     msg_status = ""
-    antivirus_active = session.get(f"av_active_{lic_key}", False)
-
     if request.method == "POST":
-        action = request.form.get("action")
-        if action == "activate_antivirus":
-            session[f"av_active_{lic_key}"] = True
-            msg_status = "🛡️ Antivirus & Cloud Protection successfully activated on your allowed devices!"
-            antivirus_active = True
-        else:
-            user_msg = request.form.get("message")
-            if user_msg:
-                save_ticket_msg(f"TICK-{lic_key}", lic_key, f"Client ({v['name']})", user_msg)
-                msg_status = "✅ Message sent to support!"
+        user_msg = request.form.get("message")
+        if user_msg:
+            save_ticket_msg(f"TICK-{lic_key}", lic_key, f"Client ({v['name']})", user_msg)
+            msg_status = "✅ Message sent to support!"
 
     tickets = load_tickets()
     my_msgs = tickets.get(f"TICK-{lic_key}", {}).get("messages", [])
@@ -921,28 +934,13 @@ def client_dashboard():
         <div style="max-width:650px; margin:0 auto; background:#111827; padding:30px; border-radius:12px; border:1px solid #1e293b;">
             <h2>🛡️ Client Security Dashboard</h2>
             <p>License Key: <code style="color:#38bdf8;">{lic_key}</code> | Organization: <b>{v['org']} ({v['name']})</b></p>
-            <p>Active Plan Tier: <b style="color:#38bdf8;">{v['plan']}</b> | Expiry Date: {v['expiry']}</p>
-            
-            <!-- Antivirus Activation Section -->
-            <div style="background:var(--bg-secondary, #0b1120); border:1px solid #1e293b; padding:15px; border-radius:8px; margin:20px 0; text-align:center;">
-                <h4 style="margin:0 0 8px 0; color:#38bdf8;">Device Protection Status</h4>
-                <p style="font-size:13px; color:#94a3b8; margin:0 0 12px 0;">
-                    {'✅ Antivirus is Active & Protecting your devices.' if antivirus_active else '⚠️ Antivirus protection is currently pending activation.'}
-                </p>
-                <form method="POST">
-                    <input type="hidden" name="action" value="activate_antivirus">
-                    <button type="submit" style="background:{'#10b981' if not antivirus_active else '#0284c7'}; color:white; padding:12px 24px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px;">
-                        {'🛡️ Click Here to Activate Antivirus & Cloud Protection' if not antivirus_active else '🔄 Re-Verify & Sync Antivirus Protection'}
-                    </button>
-                </form>
-            </div>
-
+            <p>Plan Tier: <b>{v['plan']}</b> | Expiry: {v['expiry']}</p>
             <hr style="border-color:#1e293b; margin:20px 0;">
             
             <h3>💬 Private Support Messenger</h3>
             {f'<div style="background:rgba(16,185,129,0.1); border:1px solid #10b981; color:#34d399; padding:10px; border-radius:6px; font-size:13px; margin-bottom:12px;">{msg_status}</div>' if msg_status else ''}
             
-            <div style="background:#060913; height:180px; overflow-y:auto; border:1px solid #1e293b; padding:10px; border-radius:6px; margin-bottom:12px;">
+            <div style="background:#060913; height:220px; overflow-y:auto; border:1px solid #1e293b; padding:10px; border-radius:6px; margin-bottom:12px;">
                 {chat_history if chat_history else '<p style="color:#94a3b8; font-size:13px;">No messages yet. Send a message to contact admins.</p>'}
             </div>
             
