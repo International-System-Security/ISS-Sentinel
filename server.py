@@ -17,7 +17,9 @@ TICKET_FILE = "tickets.txt"
 LICENSE_FILE = "licenses.txt"
 ADMIN_LIST_FILE = "admins.txt"
 
-OWNER_EMAIL = "ibrahim@iss.com"
+OWNER_EMAIL = "admin@iss.com"
+OWNER_USERNAME = "ibr@him"
+OWNER_PASSWORD = "muhib###5869@"
 
 # Exact Verified Blue Badge SVG for Admins
 ADMIN_BADGE_SVG = '''
@@ -35,19 +37,15 @@ TRUSTED_BLACK_BADGE_SVG = '''
 '''
 
 def load_admin_data():
-    admins = {OWNER_EMAIL: {"username": "ibrahim", "password": "admin"}}
+    admins = {OWNER_EMAIL: {"username": OWNER_USERNAME, "password": OWNER_PASSWORD}}
     if os.path.exists(ADMIN_LIST_FILE):
         with open(ADMIN_LIST_FILE, "r") as f:
             for line in f:
                 parts = line.strip().split("|||")
                 if len(parts) >= 3:
                     em, uname, pwd = parts[0].strip(), parts[1].strip(), parts[2].strip()
-                    if em:
+                    if em and em != OWNER_EMAIL:
                         admins[em] = {"username": uname, "password": pwd}
-                elif len(parts) == 1 and parts[0].strip():
-                    em = parts[0].strip()
-                    if em not in admins:
-                        admins[em] = {"username": "admin", "password": "admin"}
     return admins
 
 def save_admin_data(email, username, password):
@@ -482,31 +480,6 @@ def my_profile():
             else:
                 error = "Invalid email, username or password!"
 
-        elif action == "update_credentials" and "username" in session:
-            curr_uname = session["username"]
-            new_uname = request.form.get("new_username", "").strip()
-            new_pwd = request.form.get("new_password", "").strip()
-
-            if curr_uname in users:
-                target_key = curr_uname
-                if new_uname and new_uname != curr_uname:
-                    if new_uname in users:
-                        error = "Username already taken!"
-                    else:
-                        users[new_uname] = users.pop(curr_uname)
-                        target_key = new_uname
-                        session["username"] = target_key
-
-                if new_pwd:
-                    users[target_key]["password"] = new_pwd
-
-                user_email = users[target_key]["email"]
-                if user_email in admin_data:
-                    save_admin_data(user_email, target_key, users[target_key]["password"])
-
-                save_all_users(users)
-                msg = "✅ Username and/or Password updated successfully!"
-
         elif action == "update_pic" and "username" in session:
             curr_user = session["username"]
             if curr_user in users:
@@ -576,18 +549,6 @@ def my_profile():
             </div>
 
             {% if view_user_name == current_user %}
-            <div style="background:var(--bg-secondary); padding:20px; border-radius:8px; margin-top:20px;">
-                <h4>Change Username & Password</h4>
-                <form method="POST">
-                    <input type="hidden" name="action" value="update_credentials">
-                    <label style="font-size:12px; color:var(--text-muted);">New Username</label>
-                    <input type="text" name="new_username" value="{{ view_user_name }}" required>
-                    <label style="font-size:12px; color:var(--text-muted);">New Password</label>
-                    <input type="password" name="new_password" placeholder="Enter new password" required>
-                    <button type="submit">Update Credentials</button>
-                </form>
-            </div>
-
             <div style="background:var(--bg-secondary); padding:20px; border-radius:8px; margin-top:20px;">
                 <h4>Upload Profile Picture from Gallery</h4>
                 <form method="POST" enctype="multipart/form-data">
