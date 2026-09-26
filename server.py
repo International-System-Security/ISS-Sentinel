@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = "iss_enterprise_security_secret_key_v22"
+app.secret_key = "iss_enterprise_security_secret_key_v23"
 
 # Ensure absolute upload folder exists correctly
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'static', 'uploads')
@@ -403,13 +403,13 @@ def home():
 # --- MY PROFILE ---
 @app.route("/my-profile", methods=["GET", "POST"])
 def my_profile():
-    users = load_users()
-    admin_data = load_admin_data()
     msg = ""
     error = ""
 
     if request.method == "POST":
         action = request.form.get("action")
+        users = load_users()
+        admin_data = load_admin_data()
         
         if action == "register":
             uname = request.form.get("username", "").strip()
@@ -483,16 +483,17 @@ def my_profile():
 
         elif action == "update_pic" and "username" in session:
             curr_user = session["username"]
-            if 'profile_pic_file' in request.files:
-                file = request.files['profile_pic_file']
-                if file and file.filename != '':
-                    filename = secure_filename(f"{curr_user}_{int(datetime.now().timestamp())}_{file.filename}")
-                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                    users[curr_user]["pic"] = f"/static/uploads/{filename}"
-                    save_all_users(users)
-                    msg = "✅ Profile picture uploaded successfully from gallery!"
-                else:
-                    error = "Please select an image file to upload."
+            if curr_user in users:
+                if 'profile_pic_file' in request.files:
+                    file = request.files['profile_pic_file']
+                    if file and file.filename != '':
+                        filename = secure_filename(f"{curr_user}_{int(datetime.now().timestamp())}_{file.filename}")
+                        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                        users[curr_user]["pic"] = f"/static/uploads/{filename}"
+                        save_all_users(users)
+                        msg = "✅ Profile picture uploaded successfully from gallery!"
+                    else:
+                        error = "Please select an image file to upload."
 
         elif action == "toggle_trusted" and "username" in session:
             current_user = session["username"]
@@ -503,6 +504,7 @@ def my_profile():
                     save_all_users(users)
                     msg = f"✅ Trusted Black Badge status updated for '{target_user}'!"
 
+    users = load_users()
     current_user = session.get("username")
     user_data = users.get(current_user) if current_user else None
     
@@ -1014,4 +1016,4 @@ def ticket_chat():
     """, current_user=current_user, my_msgs=my_msgs, msg_status=msg_status)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000, debug=True)
