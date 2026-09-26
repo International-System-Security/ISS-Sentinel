@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = "iss_enterprise_security_secret_key_v19"
+app.secret_key = "iss_enterprise_security_secret_key_v17"
 
 UPLOAD_FOLDER = 'static/uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -70,8 +70,6 @@ def remove_admin_email(email):
 def load_users():
     users = {}
     admin_data = load_admin_data()
-    
-    # First load standard users from file (filtering out duplicates or admin overlaps to prevent multiple listings)
     if os.path.exists(USER_FILE):
         with open(USER_FILE, "r") as f:
             for line in f:
@@ -79,48 +77,45 @@ def load_users():
                 if len(parts) >= 8:
                     uname = parts[0].strip()
                     email = parts[1].strip()
-                    # Skip if email belongs to admin database to handle them centrally below
-                    if email in admin_data:
-                        continue
-                    role = parts[3].strip()
+                    role = "Admin" if email in admin_data else parts[3].strip()
+                    verified = True if role == "Admin" else parts[5].strip() == "True"
                     users[uname] = {
                         "email": email, "password": parts[2].strip(),
                         "role": role, "pic": parts[4].strip(),
-                        "verified": parts[5].strip() == "True", "trusted": parts[6].strip() == "True",
+                        "verified": verified, "trusted": parts[6].strip() == "True",
                         "last_active": parts[7].strip()
                     }
                 elif len(parts) >= 6:
                     uname = parts[0].strip()
                     email = parts[1].strip()
-                    if email in admin_data:
-                        continue
-                    role = parts[3].strip()
+                    role = "Admin" if email in admin_data else parts[3].strip()
+                    verified = True if role == "Admin" else parts[5].strip() == "True"
                     users[uname] = {
                         "email": email, "password": parts[2].strip(),
                         "role": role, "pic": parts[4].strip(),
-                        "verified": parts[5].strip() == "True", "trusted": False,
+                        "verified": verified, "trusted": False,
                         "last_active": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     }
     
-    # Now inject unique admin profiles cleanly
     for em, data in admin_data.items():
         uname = data["username"]
         pwd = data["password"]
-        users[uname] = {
-            "email": em, "password": pwd, "role": "Admin",
-            "pic": "https://i.imgur.com/6VBx3io.png", "verified": True, "trusted": False,
-            "last_active": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
+        if uname not in users:
+            users[uname] = {
+                "email": em, "password": pwd, "role": "Admin",
+                "pic": "https://i.imgur.com/6VBx3io.png", "verified": True, "trusted": False,
+                "last_active": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+        else:
+            users[uname]["role"] = "Admin"
+            users[uname]["email"] = em
+            users[uname]["password"] = pwd
+            users[uname]["verified"] = True
     return users
 
 def save_all_users(users_dict):
     with open(USER_FILE, "w") as f:
-        admin_data = load_admin_data()
-        admin_emails = list(admin_data.keys())
         for uname, data in users_dict.items():
-            # Do not save admin accounts into standard user file to prevent overlap loops
-            if data['email'] in admin_emails or data['role'] == 'Admin':
-                continue
             f.write(f"{uname}|||{data['email']}|||{data['password']}|||{data['role']}|||{data['pic']}|||{data['verified']}|||{data['trusted']}|||{data.get('last_active', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))}\n")
 
 def check_inactivity_logout():
@@ -239,15 +234,9 @@ def home():
                 inquiry_msg = "✅ Your service application has been submitted successfully!"
         elif form_type == "create_post" and "username" in session:
             content = request.form.get("content")
-            img_path = ""
-            if 'post_img_file' in request.files:
-                file = request.files['post_img_file']
-                if file and file.filename != '':
-                    filename = secure_filename(f"post_{int(datetime.now().timestamp())}_{file.filename}")
-                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                    img_path = f"/static/uploads/{filename}"
+            img = request.form.get("img")
             if content:
-                save_post(session["username"], content, img_path)
+                save_post(session["username"], content, img)
                 return redirect(url_for("home"))
 
     current_user = session.get("username")
@@ -313,11 +302,10 @@ def home():
 
                 {f'''
                 <div style="background:var(--bg-secondary); padding:15px; border-radius:8px; margin-bottom:20px;">
-                    <form method="POST" enctype="multipart/form-data">
+                    <form method="POST">
                         <input type="hidden" name="form_type" value="create_post">
                         <textarea name="content" placeholder="What's on your mind?" rows="3" required style="margin:0 0 10px 0;"></textarea>
-                        <label style="font-size:12px; color:var(--text-muted);">Attach Image from Gallery (Optional)</label>
-                        <input type="file" name="post_img_file" accept="image/*" style="padding: 8px; background: #060913; margin: 0 0 10px 0;">
+                        <input type="text" name="img" placeholder="Optional Image URL (https://...)" style="margin:0 0 10px 0;">
                         <button type="submit">Post to ISS Social</button>
                     </form>
                 </div>
@@ -384,13 +372,13 @@ def my_profile():
 
     if request.method == "POST":
         action = request.form.get("action")
-        
         if action == "register":
             uname = request.form.get("username").strip()
             email = request.form.get("email").strip()
             pwd = request.form.get("password").strip()
             pic = "https://i.imgur.com/6VBx3io.png"
 
+            # Check if file uploaded during registration
             if 'profile_pic_file' in request.files:
                 file = request.files['profile_pic_file']
                 if file and file.filename != '':
