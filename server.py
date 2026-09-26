@@ -1,9 +1,14 @@
 from flask import Flask, render_template_string, request, redirect, url_for, session
 import os
 from datetime import datetime, timedelta
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = "iss_enterprise_security_secret_key_v16"
+app.secret_key = "iss_enterprise_security_secret_key_v17"
+
+UPLOAD_FOLDER = 'static/uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 USER_FILE = "users.txt"
 POST_FILE = "posts.txt"
@@ -371,7 +376,15 @@ def my_profile():
             uname = request.form.get("username").strip()
             email = request.form.get("email").strip()
             pwd = request.form.get("password").strip()
-            pic = request.form.get("pic").strip() or "https://i.imgur.com/6VBx3io.png"
+            pic = "https://i.imgur.com/6VBx3io.png"
+
+            # Check if file uploaded during registration
+            if 'profile_pic_file' in request.files:
+                file = request.files['profile_pic_file']
+                if file and file.filename != '':
+                    filename = secure_filename(f"{uname}_{int(datetime.now().timestamp())}_{file.filename}")
+                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                    pic = f"/static/uploads/{filename}"
 
             if uname in users:
                 error = "Username already exists!"
@@ -431,11 +444,17 @@ def my_profile():
                 msg = "✅ Username and/or Password updated successfully!"
 
         elif action == "update_pic" and "username" in session:
-            new_pic = request.form.get("pic").strip()
-            if new_pic:
-                users[session["username"]]["pic"] = new_pic
-                save_all_users(users)
-                msg = "✅ Profile picture updated successfully!"
+            curr_user = session["username"]
+            if 'profile_pic_file' in request.files:
+                file = request.files['profile_pic_file']
+                if file and file.filename != '':
+                    filename = secure_filename(f"{curr_user}_{int(datetime.now().timestamp())}_{file.filename}")
+                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                    users[curr_user]["pic"] = f"/static/uploads/{filename}"
+                    save_all_users(users)
+                    msg = "✅ Profile picture uploaded successfully from gallery!"
+                else:
+                    error = "Please select an image file to upload."
 
         elif action == "toggle_trusted" and "username" in session:
             current_user = session["username"]
@@ -503,11 +522,12 @@ def my_profile():
             </div>
 
             <div style="background:var(--bg-secondary); padding:20px; border-radius:8px; margin-top:20px;">
-                <h4>Update Profile Picture</h4>
-                <form method="POST">
+                <h4>Upload Profile Picture from Gallery</h4>
+                <form method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="action" value="update_pic">
-                    <input type="text" name="pic" placeholder="New Image URL (https://...)" required>
-                    <button type="submit">Update Picture</button>
+                    <label style="font-size:12px; color:var(--text-muted);">Select Image File</label>
+                    <input type="file" name="profile_pic_file" accept="image/*" required style="padding: 8px; background: #060913;">
+                    <button type="submit">Upload Picture</button>
                 </form>
             </div>
             ''' if view_user_name == current_user else ''}
@@ -536,7 +556,6 @@ def my_profile():
                 <button onclick="document.getElementById('reg-form').style.display='block'; document.getElementById('login-form').style.display='none';" style="background:#1e293b;">Register</button>
             </div>
 
-            <!-- Login Form (Email -> Username -> Password) -->
             <div id="login-form">
                 <h3>Account Login</h3>
                 <form method="POST">
@@ -551,10 +570,9 @@ def my_profile():
                 </form>
             </div>
 
-            <!-- Register Form -->
             <div id="reg-form" style="display:none;">
                 <h3>Join ISS Social (Register)</h3>
-                <form method="POST">
+                <form method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="action" value="register">
                     <label style="font-size:12px; color:var(--text-muted);">Username</label>
                     <input type="text" name="username" required>
@@ -562,9 +580,9 @@ def my_profile():
                     <input type="email" name="email" required>
                     <label style="font-size:12px; color:var(--text-muted);">Password</label>
                     <input type="password" name="password" required>
-                    <label style="font-size:12px; color:var(--text-muted);">Profile Picture URL (Optional)</label>
-                    <input type="text" name="pic" placeholder="https://...">
-                    <button type="submit">Register Account</button>
+                    <label style="font-size:12px; color:var(--text-muted);">Profile Picture (From Gallery)</label>
+                    <input type="file" name="profile_pic_file" accept="image/*" style="padding: 8px; background: #060913;">
+                    <button type="submit" style="margin-top: 10px;">Register Account</button>
                 </form>
             </div>
             '''}
@@ -660,7 +678,7 @@ def admin_panel():
 
         {f'<div style="background: rgba(16,185,129,0.1); border: 1px solid #10b981; color: #34d399; padding: 12px; border-radius: 8px; margin-bottom: 20px;">{msg}</div>' if msg else ''}
 
-        <!-- Add New Admin Form (Email -> Username -> Password) -->
+        <!-- Add New Admin Form -->
         <div class="box">
             <h3>👥 Add New Admin</h3>
             <form method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 15px;">
