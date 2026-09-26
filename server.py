@@ -3,7 +3,7 @@ import os
 from flask import Flask, redirect, render_template_string, request, session, url_for
 
 app = Flask(__name__)
-app.secret_key = "iss_enterprise_security_secret_key_v14"
+app.secret_key = "iss_enterprise_security_secret_key_v15"
 
 USER_FILE = "users.txt"
 POST_FILE = "posts.txt"
@@ -22,7 +22,6 @@ ADMIN_BADGE_SVG = '''
 </svg>
 '''
 
-# Trusted Black Badge SVG for Trusted Members selected by Admin
 TRUSTED_BLACK_BADGE_SVG = '''
 <svg width="16" height="16" viewBox="0 0 24 24" fill="#000000" style="vertical-align: middle; margin-left: 4px;" title="Trusted Member">
     <path d="M12 2L14.34 3.73L17.25 3.5L18.77 6.04L21.5 7.15L21.57 10.12L23.75 12.12L22.12 14.75L22.5 17.75L19.75 19L18.38 21.62L15.5 21.37L13.38 23.25L10.62 22.25L8.12 23.37L6.38 21.12L3.62 20.37L3.12 17.5L0.87 15.62L2.12 12.87L0.87 10.12L3.12 8.25L3.87 5.5L6.62 5.12L8.5 2.87L11.25 3.87L12 2Z" fill="#1e293b" stroke="#38bdf8" stroke-width="1"/>
@@ -30,37 +29,42 @@ TRUSTED_BLACK_BADGE_SVG = '''
 </svg>
 '''
 
-def load_admin_emails():
-    admins = [OWNER_EMAIL, "admin@iss.com"]
+def load_admin_data():
+    admins = {OWNER_EMAIL: {"username": "ibrahim", "password": "admin"}}
     if os.path.exists(ADMIN_LIST_FILE):
         with open(ADMIN_LIST_FILE, "r") as f:
             for line in f:
-                em = line.strip()
-                if em and em not in admins:
-                    admins.append(em)
+                parts = line.strip().split("|||")
+                if len(parts) >= 3:
+                    em, uname, pwd = parts[0].strip(), parts[1].strip(), parts[2].strip()
+                    if em:
+                        admins[em] = {"username": uname, "password": pwd}
+                elif len(parts) == 1 and parts[0].strip():
+                    em = parts[0].strip()
+                    if em not in admins:
+                        admins[em] = {"username": "admin", "password": "admin"}
     return admins
 
-def save_admin_email(email):
-    admins = load_admin_emails()
-    if email not in admins:
-        admins.append(email)
-        with open(ADMIN_LIST_FILE, "w") as f:
-            for ad in admins:
-                if ad != OWNER_EMAIL and ad != "admin@iss.com":
-                    f.write(ad + "\n")
+def save_admin_data(email, username, password):
+    admins = load_admin_data()
+    admins[email] = {"username": username, "password": password}
+    with open(ADMIN_LIST_FILE, "w") as f:
+        for em, data in admins.items():
+            if em != OWNER_EMAIL:
+                f.write(f"{em}|||{data['username']}|||{data['password']}\n")
 
 def remove_admin_email(email):
-    admins = load_admin_emails()
-    if email in admins and email != OWNER_EMAIL and email != "admin@iss.com":
-        admins.remove(email)
+    admins = load_admin_data()
+    if email in admins and email != OWNER_EMAIL:
+        del admins[email]
         with open(ADMIN_LIST_FILE, "w") as f:
-            for ad in admins:
-                if ad != OWNER_EMAIL and ad != "admin@iss.com":
-                    f.write(ad + "\n")
+            for em, data in admins.items():
+                if em != OWNER_EMAIL:
+                    f.write(f"{em}|||{data['username']}|||{data['password']}\n")
 
 def load_users():
     users = {}
-    admin_emails = load_admin_emails()
+    admin_data = load_admin_data()
     if os.path.exists(USER_FILE):
         with open(USER_FILE, "r") as f:
             for line in f:
@@ -68,7 +72,7 @@ def load_users():
                 if len(parts) >= 8:
                     uname = parts[0].strip()
                     email = parts[1].strip()
-                    role = "Admin" if (email in admin_emails or email == OWNER_EMAIL) else parts[3].strip()
+                    role = "Admin" if email in admin_data else parts[3].strip()
                     verified = True if role == "Admin" else parts[5].strip() == "True"
                     users[uname] = {
                         "email": email, "password": parts[2].strip(),
@@ -79,7 +83,7 @@ def load_users():
                 elif len(parts) >= 6:
                     uname = parts[0].strip()
                     email = parts[1].strip()
-                    role = "Admin" if (email in admin_emails or email == OWNER_EMAIL) else parts[3].strip()
+                    role = "Admin" if email in admin_data else parts[3].strip()
                     verified = True if role == "Admin" else parts[5].strip() == "True"
                     users[uname] = {
                         "email": email, "password": parts[2].strip(),
@@ -87,12 +91,22 @@ def load_users():
                         "verified": verified, "trusted": False,
                         "last_active": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     }
-    if "ibrahim" not in users:
-        users["ibrahim"] = {
-            "email": OWNER_EMAIL, "password": "admin", "role": "Admin",
-            "pic": "https://i.imgur.com/6VBx3io.png", "verified": True, "trusted": False,
-            "last_active": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
+    
+    # Sync admin accounts into users dict
+    for em, data in admin_data.items():
+        uname = data["username"]
+        pwd = data["password"]
+        if uname not in users:
+            users[uname] = {
+                "email": em, "password": pwd, "role": "Admin",
+                "pic": "https://i.imgur.com/6VBx3io.png", "verified": True, "trusted": False,
+                "last_active": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+        else:
+            users[uname]["role"] = "Admin"
+            users[uname]["email"] = em
+            users[uname]["password"] = pwd
+            users[uname]["verified"] = True
     return users
 
 def save_all_users(users_dict):
@@ -344,11 +358,11 @@ def home():
     </html>
     """)
 
-# --- MY PROFILE (Login, Register & Change Username/Password for both roles) ---
+# --- MY PROFILE ---
 @app.route("/my-profile", methods=["GET", "POST"])
 def my_profile():
     users = load_users()
-    admin_emails = load_admin_emails()
+    admin_data = load_admin_data()
     msg = ""
     error = ""
 
@@ -363,7 +377,7 @@ def my_profile():
             if uname in users:
                 error = "Username already exists!"
             else:
-                role = "Admin" if (email in admin_emails or email == OWNER_EMAIL) else "User"
+                role = "Admin" if (email in admin_data or email == OWNER_EMAIL) else "User"
                 is_verified = True if role == "Admin" else False
                 
                 users[uname] = {
@@ -403,13 +417,17 @@ def my_profile():
                     if new_uname in users:
                         error = "Username already taken!"
                     else:
-                        # Rename key in users dictionary
                         users[new_uname] = users.pop(curr_uname)
                         curr_uname = new_uname
                         session["username"] = curr_uname
 
                 if new_pwd:
                     users[curr_uname]["password"] = new_pwd
+
+                # Also sync if admin credentials changed
+                user_email = users[curr_uname]["email"]
+                if user_email in admin_data:
+                    save_admin_data(user_email, curr_uname, users[curr_uname]["password"])
 
                 save_all_users(users)
                 msg = "✅ Username and/or Password updated successfully!"
@@ -474,7 +492,6 @@ def my_profile():
             </div>
 
             {f'''
-            <!-- Change Username & Password Section for Both Roles -->
             <div style="background:var(--bg-secondary); padding:20px; border-radius:8px; margin-top:20px;">
                 <h4>Change Username & Password</h4>
                 <form method="POST">
@@ -497,7 +514,6 @@ def my_profile():
             </div>
             ''' if view_user_name == current_user else ''}
 
-            <!-- Admin Add to Trusted Button -->
             {f'''
             <div style="background:var(--bg-secondary); padding:20px; border-radius:8px; margin-top:20px; border: 1px dashed var(--accent-blue);">
                 <h4 style="color:var(--accent-blue); margin-top:0;">Admin Trust Control</h4>
@@ -522,23 +538,21 @@ def my_profile():
                 <button onclick="document.getElementById('reg-form').style.display='block'; document.getElementById('login-form').style.display='none';" style="background:#1e293b;">Register</button>
             </div>
 
-            <!-- Login Form -->
             <div id="login-form">
                 <h3>Account Login</h3>
                 <p style="font-size:12px; color:var(--text-muted);">Owner Login: <b>ibrahim / admin</b> ({OWNER_EMAIL})</p>
                 <form method="POST">
                     <input type="hidden" name="action" value="login">
                     <label style="font-size:12px; color:var(--text-muted);">Username</label>
-                    <input type="text" name="username" value="ibrahim" required>
+                    <input type="text" name="username" required>
                     <label style="font-size:12px; color:var(--text-muted);">Email Address</label>
-                    <input type="email" name="email" value="ibrahim@iss.com" required>
+                    <input type="email" name="email" required>
                     <label style="font-size:12px; color:var(--text-muted);">Password</label>
-                    <input type="password" name="password" value="admin" required>
+                    <input type="password" name="password" required>
                     <button type="submit">Login</button>
                 </form>
             </div>
 
-            <!-- Register Form -->
             <div id="reg-form" style="display:none;">
                 <h3>Join ISS Social (Register)</h3>
                 <form method="POST">
@@ -576,11 +590,13 @@ def admin_panel():
     msg = ""
     if request.method == "POST":
         action = request.form.get("action")
-        if action == "add_admin_email":
-            new_em = request.form.get("new_admin_email", "").strip()
-            if new_em:
-                save_admin_email(new_em)
-                msg = f"✅ Admin email '{new_em}' authorized successfully!"
+        if action == "add_admin":
+            new_em = request.form.get("admin_email", "").strip()
+            new_uname = request.form.get("admin_username", "").strip()
+            new_pwd = request.form.get("admin_password", "").strip()
+            if new_em and new_uname and new_pwd:
+                save_admin_data(new_em, new_uname, new_pwd)
+                msg = f"✅ Admin '{new_uname}' ({new_em}) added successfully!"
         elif action == "remove_admin_email":
             rem_em = request.form.get("remove_email", "").strip()
             if rem_em:
@@ -611,7 +627,7 @@ def admin_panel():
             msg = f"✅ License '{l_key}' created successfully with plan '{l_plan}'!"
 
     licenses = load_licenses()
-    admin_emails = load_admin_emails()
+    admin_data = load_admin_data()
     inquiries = []
     if os.path.exists(INQUIRY_FILE):
         with open(INQUIRY_FILE, "r") as f:
@@ -645,17 +661,30 @@ def admin_panel():
 
         {f'<div style="background: rgba(16,185,129,0.1); border: 1px solid #10b981; color: #34d399; padding: 12px; border-radius: 8px; margin-bottom: 20px;">{msg}</div>' if msg else ''}
 
-        <!-- Add Admin Email Section -->
+        <!-- Add New Admin Form (Email, Username, Password) -->
         <div class="box">
-            <h3>👥 Add New Admin Email</h3>
-            <p style="font-size:13px; color:#94a3b8;">Owner Email: <code style="color:#38bdf8;">{OWNER_EMAIL}</code>. Enter an email address below to grant admin privileges. When that user registers or logs in with this email, they will automatically become an Admin.</p>
-            <form method="POST" style="display:flex; gap:10px; margin-bottom:15px;">
-                <input type="hidden" name="action" value="add_admin_email">
-                <input type="email" name="new_admin_email" placeholder="Enter admin email (e.g. partner@gmail.com)" required style="flex:1; margin:0;">
-                <button type="submit" style="width:auto; margin:0;">Add Admin Email</button>
+            <h3>👥 Add New Admin</h3>
+            <p style="font-size:13px; color:#94a3b8;">Master Owner Email: <code style="color:#38bdf8;">{OWNER_EMAIL}</code>. Provide Email, Username, and Password to add a new administrator.</p>
+            <form method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 15px;">
+                <input type="hidden" name="action" value="add_admin">
+                <div>
+                    <label style="font-size:12px; color:#94a3b8;">Email</label>
+                    <input type="email" name="admin_email" required style="width:100%;">
+                </div>
+                <div>
+                    <label style="font-size:12px; color:#94a3b8;">Username</label>
+                    <input type="text" name="admin_username" required style="width:100%;">
+                </div>
+                <div>
+                    <label style="font-size:12px; color:#94a3b8;">Password</label>
+                    <input type="password" name="admin_password" required style="width:100%;">
+                </div>
+                <button type="submit" style="grid-column: 1 / -1; margin-top: 10px;">Add Admin</button>
             </form>
+            
+            <h4 style="margin-top: 20px;">Authorized Admins List:</h4>
             <ul>
-                {"".join([f'<li style="font-size:13px; margin:5px 0;">{em} ' + (f'<form method="POST" style="display:inline; margin-left:10px;"><input type="hidden" name="action" value="remove_admin_email"><input type="hidden" name="remove_email" value="{em}"><button type="submit" style="background:#ef4444; padding:2px 8px; font-size:11px;">Remove</button></form>' if em != OWNER_EMAIL and em != "admin@iss.com" else '<span style="color:#38bdf8; font-size:11px;">(Owner / Master)</span>') + '</li>' for em in admin_emails])}
+                {"".join([f'<li style="font-size:13px; margin:5px 0;"><b>{data["username"]}</b> ({em}) ' + (f'<form method="POST" style="display:inline; margin-left:10px;"><input type="hidden" name="action" value="remove_admin_email"><input type="hidden" name="remove_email" value="{em}"><button type="submit" style="background:#ef4444; padding:2px 8px; font-size:11px;">Remove</button></form>' if em != OWNER_EMAIL else '<span style="color:#38bdf8; font-size:11px;">(Master Owner)</span>') + '</li>' for em, data in admin_data.items()])}
             </ul>
         </div>
 
@@ -668,7 +697,7 @@ def admin_panel():
             <h3>🔑 License Management (Create with Plan Tier & Expiry)</h3>
             <form method="POST" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:15px;">
                 <input type="hidden" name="action" value="add_license">
-                <input type="text" name="l_key" placeholder="License Key (e.g. iss-999)" required>
+                <input type="text" name="l_key" placeholder="License Key" required>
                 <input type="text" name="l_name" placeholder="Client Name" required>
                 <input type="text" name="l_org" placeholder="Organization" required>
                 <select name="l_plan">
@@ -783,11 +812,11 @@ def client_login():
             {f'<div style="color:#fca5a5; font-size:13px; margin-bottom:10px;">{error_msg}</div>' if error_msg else ''}
             <form method="POST">
                 <label style="font-size:12px; color:#94a3b8;">License ID</label>
-                <input type="text" name="lic_key" placeholder="Enter License ID" required style="width:100%; padding:10px; margin:5px 0 12px 0; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
+                <input type="text" name="lic_key" required style="width:100%; padding:10px; margin:5px 0 12px 0; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
                 <label style="font-size:12px; color:#94a3b8;">Username</label>
-                <input type="text" name="c_user" value="admin" required style="width:100%; padding:10px; margin:5px 0 12px 0; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
+                <input type="text" name="c_user" required style="width:100%; padding:10px; margin:5px 0 12px 0; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
                 <label style="font-size:12px; color:#94a3b8;">Password</label>
-                <input type="password" name="c_pwd" value="admin" required style="width:100%; padding:10px; margin:5px 0 15px 0; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
+                <input type="password" name="c_pwd" required style="width:100%; padding:10px; margin:5px 0 15px 0; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
                 <button type="submit" style="width:100%; padding:12px; background:#0ea5e9; border:none; color:white; font-weight:bold; border-radius:6px; cursor:pointer;">Login Client Portal</button>
             </form>
             <br><a href="/" style="color:#38bdf8; font-size:13px; text-decoration:none;">&larr; Return to Home</a>
