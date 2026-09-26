@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = "iss_enterprise_security_secret_key_v17"
+app.secret_key = "iss_enterprise_security_secret_key_v18"
 
 UPLOAD_FOLDER = 'static/uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -372,13 +372,13 @@ def my_profile():
 
     if request.method == "POST":
         action = request.form.get("action")
+        
         if action == "register":
             uname = request.form.get("username").strip()
             email = request.form.get("email").strip()
             pwd = request.form.get("password").strip()
             pic = "https://i.imgur.com/6VBx3io.png"
 
-            # Check if file uploaded during registration
             if 'profile_pic_file' in request.files:
                 file = request.files['profile_pic_file']
                 if file and file.filename != '':
