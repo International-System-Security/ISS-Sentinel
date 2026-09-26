@@ -71,7 +71,7 @@ def load_users():
     users = {}
     admin_data = load_admin_data()
     admin_emails = set(admin_data.keys())
-
+    
     if os.path.exists(USER_FILE):
         with open(USER_FILE, "r") as f:
             for line in f:
@@ -102,7 +102,7 @@ def load_users():
                         "verified": verified, "trusted": False,
                         "last_active": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     }
-
+    
     for em, data in admin_data.items():
         uname = data["username"]
         pwd = data["password"]
@@ -222,7 +222,7 @@ def home():
     users = load_users()
     posts = load_posts()
     inquiry_msg = ""
-
+    
     search_query = request.args.get("search", "").strip()
     filtered_users = {u: d for u, d in users.items() if search_query.lower() in u.lower()} if search_query else users
 
@@ -432,7 +432,7 @@ def my_profile():
             else:
                 role = "Admin" if (email in admin_data or email == OWNER_EMAIL) else "User"
                 is_verified = True if role == "Admin" else False
-
+                
                 users[uname] = {
                     "email": email, "password": pwd, "role": role, "pic": pic,
                     "verified": is_verified, "trusted": False,
@@ -453,7 +453,7 @@ def my_profile():
                 session["username"] = uname
                 users[uname]["last_active"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 save_all_users(users)
-
+                
                 if users[uname]["role"] == "Admin":
                     return redirect(url_for("admin_panel"))
                 return redirect(url_for("my_profile"))
@@ -511,7 +511,7 @@ def my_profile():
     current_user = session.get("username")
     users = load_users() 
     user_data = users.get(current_user) if current_user else None
-
+    
     view_user_name = request.args.get("user", current_user)
     view_data = users.get(view_user_name)
 
@@ -678,7 +678,7 @@ def admin_panel():
             l_plan = request.form.get("l_plan", "Basic (2 Devices)")
             l_user = request.form.get("l_user", "admin")
             l_pwd = request.form.get("l_pwd", "admin")
-
+            
             licenses = load_licenses()
             licenses[l_key] = {
                 "name": l_name, "org": l_org, "expiry": l_expiry,
@@ -806,7 +806,7 @@ def admin_tickets():
             return redirect(url_for('admin_tickets', tid=t_id))
 
     ticket_list_html = "".join([f'<a href="/admin/tickets?tid={tid}" style="display:block; padding:10px; margin:6px 0; background:#1e293b; color:#38bdf8; text-decoration:none; border-radius:6px; font-size:13px;">Ticket: {tid} (User: {data["user"]})</a>' for tid, data in tickets.items()])
-
+    
     chat_box_html = "<p style='color:#94a3b8;'>Select a ticket from the left list to view and reply.</p>"
     if selected_tid and selected_tid in tickets:
         t_data = tickets[selected_tid]
@@ -849,7 +849,7 @@ def client_login():
         lic_key = request.form.get("lic_key", "").strip()
         c_user = request.form.get("c_user", "").strip()
         c_pwd = request.form.get("c_pwd", "").strip()
-
+        
         licenses = load_licenses()
         if lic_key in licenses:
             stored_user = licenses[lic_key].get("client_user", "admin")
