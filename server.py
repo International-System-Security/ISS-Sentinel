@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = "iss_enterprise_security_secret_key_v25"
+app.secret_key = "iss_enterprise_security_secret_key_v26"
 
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -65,9 +65,8 @@ def remove_admin_email(email):
 def load_users():
     users = {}
     admin_data = load_admin_data()
-    admin_emails = set(admin_data.keys())
-    admin_usernames = set(d["username"] for d in admin_data.values())
-
+    
+    # Load regular users from file
     if os.path.exists(USER_FILE):
         with open(USER_FILE, "r") as f:
             for line in f:
@@ -75,7 +74,8 @@ def load_users():
                 if len(parts) >= 8:
                     uname = parts[0].strip()
                     email = parts[1].strip()
-                    if email in admin_emails:
+                    # Skip if email matches an admin to prevent duplicate listing
+                    if email in admin_data:
                         continue
                     users[uname] = {
                         "email": email, "password": parts[2].strip(),
@@ -86,7 +86,7 @@ def load_users():
                 elif len(parts) >= 6:
                     uname = parts[0].strip()
                     email = parts[1].strip()
-                    if email in admin_emails:
+                    if email in admin_data:
                         continue
                     users[uname] = {
                         "email": email, "password": parts[2].strip(),
@@ -95,6 +95,7 @@ def load_users():
                         "last_active": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     }
     
+    # Add admins uniquely
     for em, data in admin_data.items():
         uname = data["username"]
         pwd = data["password"]
@@ -108,29 +109,11 @@ def load_users():
 def save_all_users(users_dict):
     with open(USER_FILE, "w") as f:
         admin_data = load_admin_data()
-        admin_emails = set(admin_data.keys())
+        admin_emails = list(admin_data.keys())
         for uname, data in users_dict.items():
             if data['email'] in admin_emails or data['role'] == 'Admin':
                 continue
             f.write(f"{uname}|||{data['email']}|||{data['password']}|||{data['role']}|||{data['pic']}|||{data['verified']}|||{data['trusted']}|||{data.get('last_active', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))}\n")
-
-def check_inactivity_logout():
-    current_user = session.get("username")
-    if current_user:
-        users = load_users()
-        if current_user in users:
-            last_active_str = users[current_user].get("last_active")
-            if last_active_str:
-                try:
-                    last_active_time = datetime.strptime(last_active_str, "%Y-%m-%d %H:%M:%S")
-                    if datetime.now() - last_active_time > timedelta(days=30):
-                        session.pop("username", None)
-                        return True
-                except:
-                    pass
-            users[current_user]["last_active"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            save_all_users(users)
-    return False
 
 def load_posts():
     posts = []
@@ -203,10 +186,6 @@ def save_licenses(lic_dict):
     with open(LICENSE_FILE, "w") as f:
         for k, v in lic_dict.items():
             f.write(f"{k},{v['name']},{v['org']},{v['expiry']},{v['max']},{v['plan']},{v['client_user']},{v['client_pwd']}\n")
-
-@app.before_request
-def before_request_func():
-    check_inactivity_logout()
 
 # --- 1. HOME PANEL ---
 @app.route("/", methods=["GET", "POST"])
@@ -313,7 +292,7 @@ def home():
                     <form method="POST" enctype="multipart/form-data">
                         <input type="hidden" name="form_type" value="create_post">
                         <textarea name="content" placeholder="What's on your mind?" rows="3" required style="margin:0 0 10px 0;"></textarea>
-                        <label style="font-size:12px; color:var(--text-muted);">Attach Image from Gallery (Optional)</label>
+                        <label style="font-size:12px; color:var(--text-muted);">Attach Image from Gallery (Choose File)</label>
                         <input type="file" name="post_img_file" accept="image/*" style="padding: 8px; background: #060913; margin: 0 0 10px 0;">
                         <button type="submit">Post to ISS Social</button>
                     </form>
@@ -400,13 +379,13 @@ def home():
 # --- MY PROFILE ---
 @app.route("/my-profile", methods=["GET", "POST"])
 def my_profile():
+    users = load_users()
+    admin_data = load_admin_data()
     msg = ""
     error = ""
 
     if request.method == "POST":
         action = request.form.get("action")
-        users = load_users()
-        admin_data = load_admin_data()
         
         if action == "register":
             uname = request.form.get("username", "").strip()
@@ -460,21 +439,20 @@ def my_profile():
             new_pwd = request.form.get("new_password", "").strip()
 
             if curr_uname in users:
-                target_key = curr_uname
                 if new_uname and new_uname != curr_uname:
                     if new_uname in users:
                         error = "Username already taken!"
                     else:
                         users[new_uname] = users.pop(curr_uname)
-                        target_key = new_uname
-                        session["username"] = target_key
+                        curr_uname = new_uname
+                        session["username"] = curr_uname
 
                 if new_pwd:
-                    users[target_key]["password"] = new_pwd
+                    users[curr_uname]["password"] = new_pwd
 
-                user_email = users[target_key]["email"]
+                user_email = users[curr_uname]["email"]
                 if user_email in admin_data:
-                    save_admin_data(user_email, target_key, users[target_key]["password"])
+                    save_admin_data(user_email, curr_uname, users[curr_uname]["password"])
 
                 save_all_users(users)
                 msg = "✅ Username and/or Password updated successfully!"
@@ -502,6 +480,7 @@ def my_profile():
                     save_all_users(users)
                     msg = f"✅ Trusted Black Badge status updated for '{target_user}'!"
 
+    # Refresh data after POST
     users = load_users()
     current_user = session.get("username")
     user_data = users.get(current_user) if current_user else None
@@ -566,7 +545,7 @@ def my_profile():
             </div>
 
             <div style="background:var(--bg-secondary); padding:20px; border-radius:8px; margin-top:20px;">
-                <h4>Upload Profile Picture from Gallery</h4>
+                <h4>Upload Profile Picture from Gallery (Choose File)</h4>
                 <form method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="action" value="update_pic">
                     <label style="font-size:12px; color:var(--text-muted);">Select Image File</label>
@@ -591,8 +570,7 @@ def my_profile():
             {% endif %}
 
             <div style="text-align:center; margin-top:25px;">
-                <a href="/my-profile" style="background:#1e293b; color:white; padding:10px 20px; border-radius:6px; text-decoration:none; display:inline-block; margin-bottom:15px; font-weight:bold;">Refresh Profile View</a>
-                <br><a href="/logout" style="color:#ef4444; font-weight:bold; font-size:14px; text-decoration:none;">Log Out Account</a>
+                <a href="/logout" style="color:#ef4444; font-weight:bold; font-size:14px; text-decoration:none;">Log Out Account</a>
                 {% if user_data['role'] == 'Admin' %}
                 <br><br><a href="/admin" style="color:#38bdf8; font-weight:bold; text-decoration:none;">Go to Admin Control Panel &rarr;</a>
                 {% endif %}
@@ -628,7 +606,7 @@ def my_profile():
                     <input type="email" name="email" required>
                     <label style="font-size:12px; color:var(--text-muted);">Password</label>
                     <input type="password" name="password" required>
-                    <label style="font-size:12px; color:var(--text-muted);">Profile Picture (From Gallery)</label>
+                    <label style="font-size:12px; color:var(--text-muted);">Profile Picture (Choose File)</label>
                     <input type="file" name="profile_pic_file" accept="image/*" style="padding: 8px; background: #060913;">
                     <button type="submit" style="margin-top: 10px;">Register Account</button>
                 </form>
