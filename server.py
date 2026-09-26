@@ -70,8 +70,6 @@ def remove_admin_email(email):
 def load_users():
     users = {}
     admin_data = load_admin_data()
-    admin_emails = set(admin_data.keys())
-    
     if os.path.exists(USER_FILE):
         with open(USER_FILE, "r") as f:
             for line in f:
@@ -79,10 +77,8 @@ def load_users():
                 if len(parts) >= 8:
                     uname = parts[0].strip()
                     email = parts[1].strip()
-                    if email in admin_emails:
-                        continue
-                    role = parts[3].strip()
-                    verified = parts[5].strip() == "True"
+                    role = "Admin" if email in admin_data else parts[3].strip()
+                    verified = True if role == "Admin" else parts[5].strip() == "True"
                     users[uname] = {
                         "email": email, "password": parts[2].strip(),
                         "role": role, "pic": parts[4].strip(),
@@ -92,10 +88,8 @@ def load_users():
                 elif len(parts) >= 6:
                     uname = parts[0].strip()
                     email = parts[1].strip()
-                    if email in admin_emails:
-                        continue
-                    role = parts[3].strip()
-                    verified = parts[5].strip() == "True"
+                    role = "Admin" if email in admin_data else parts[3].strip()
+                    verified = True if role == "Admin" else parts[5].strip() == "True"
                     users[uname] = {
                         "email": email, "password": parts[2].strip(),
                         "role": role, "pic": parts[4].strip(),
@@ -106,20 +100,22 @@ def load_users():
     for em, data in admin_data.items():
         uname = data["username"]
         pwd = data["password"]
-        users[uname] = {
-            "email": em, "password": pwd, "role": "Admin",
-            "pic": "https://i.imgur.com/6VBx3io.png", "verified": True, "trusted": False,
-            "last_active": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
+        if uname not in users:
+            users[uname] = {
+                "email": em, "password": pwd, "role": "Admin",
+                "pic": "https://i.imgur.com/6VBx3io.png", "verified": True, "trusted": False,
+                "last_active": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+        else:
+            users[uname]["role"] = "Admin"
+            users[uname]["email"] = em
+            users[uname]["password"] = pwd
+            users[uname]["verified"] = True
     return users
 
 def save_all_users(users_dict):
     with open(USER_FILE, "w") as f:
-        admin_data = load_admin_data()
-        admin_emails = set(admin_data.keys())
         for uname, data in users_dict.items():
-            if data['email'] in admin_emails or data['role'] == 'Admin':
-                continue
             f.write(f"{uname}|||{data['email']}|||{data['password']}|||{data['role']}|||{data['pic']}|||{data['verified']}|||{data['trusted']}|||{data.get('last_active', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))}\n")
 
 def check_inactivity_logout():
@@ -238,17 +234,9 @@ def home():
                 inquiry_msg = "✅ Your service application has been submitted successfully!"
         elif form_type == "create_post" and "username" in session:
             content = request.form.get("content")
-            img_path = ""
-            if 'post_img_file' in request.files:
-                file = request.files['post_img_file']
-                if file and file.filename != '':
-                    filename = secure_filename(f"post_{int(datetime.now().timestamp())}_{file.filename}")
-                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                    img_path = f"/static/uploads/{filename}"
-            if not img_path:
-                img_path = request.form.get("img", "").strip()
+            img = request.form.get("img")
             if content:
-                save_post(session["username"], content, img_path)
+                save_post(session["username"], content, img)
                 return redirect(url_for("home"))
 
     current_user = session.get("username")
@@ -314,11 +302,10 @@ def home():
 
                 {f'''
                 <div style="background:var(--bg-secondary); padding:15px; border-radius:8px; margin-bottom:20px;">
-                    <form method="POST" enctype="multipart/form-data">
+                    <form method="POST">
                         <input type="hidden" name="form_type" value="create_post">
                         <textarea name="content" placeholder="What's on your mind?" rows="3" required style="margin:0 0 10px 0;"></textarea>
-                        <label style="font-size:12px; color:var(--text-muted);">Attach Image from Gallery (Optional)</label>
-                        <input type="file" name="post_img_file" accept="image/*" style="padding: 8px; background: #060913; margin: 0 0 10px 0;">
+                        <input type="text" name="img" placeholder="Optional Image URL (https://...)" style="margin:0 0 10px 0;">
                         <button type="submit">Post to ISS Social</button>
                     </form>
                 </div>
@@ -391,6 +378,7 @@ def my_profile():
             pwd = request.form.get("password").strip()
             pic = "https://i.imgur.com/6VBx3io.png"
 
+            # Check if file uploaded during registration
             if 'profile_pic_file' in request.files:
                 file = request.files['profile_pic_file']
                 if file and file.filename != '':
@@ -437,38 +425,36 @@ def my_profile():
             new_pwd = request.form.get("new_password", "").strip()
 
             if curr_uname in users:
-                target_key = curr_uname
                 if new_uname and new_uname != curr_uname:
                     if new_uname in users:
                         error = "Username already taken!"
                     else:
                         users[new_uname] = users.pop(curr_uname)
-                        target_key = new_uname
-                        session["username"] = target_key
+                        curr_uname = new_uname
+                        session["username"] = curr_uname
 
                 if new_pwd:
-                    users[target_key]["password"] = new_pwd
+                    users[curr_uname]["password"] = new_pwd
 
-                user_email = users[target_key]["email"]
+                user_email = users[curr_uname]["email"]
                 if user_email in admin_data:
-                    save_admin_data(user_email, target_key, users[target_key]["password"])
+                    save_admin_data(user_email, curr_uname, users[curr_uname]["password"])
 
                 save_all_users(users)
                 msg = "✅ Username and/or Password updated successfully!"
 
         elif action == "update_pic" and "username" in session:
             curr_user = session["username"]
-            if curr_user in users:
-                if 'profile_pic_file' in request.files:
-                    file = request.files['profile_pic_file']
-                    if file and file.filename != '':
-                        filename = secure_filename(f"{curr_user}_{int(datetime.now().timestamp())}_{file.filename}")
-                        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                        users[curr_user]["pic"] = f"/static/uploads/{filename}"
-                        save_all_users(users)
-                        msg = "✅ Profile picture uploaded successfully from gallery!"
-                    else:
-                        error = "Please select an image file to upload."
+            if 'profile_pic_file' in request.files:
+                file = request.files['profile_pic_file']
+                if file and file.filename != '':
+                    filename = secure_filename(f"{curr_user}_{int(datetime.now().timestamp())}_{file.filename}")
+                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                    users[curr_user]["pic"] = f"/static/uploads/{filename}"
+                    save_all_users(users)
+                    msg = "✅ Profile picture uploaded successfully from gallery!"
+                else:
+                    error = "Please select an image file to upload."
 
         elif action == "toggle_trusted" and "username" in session:
             current_user = session["username"]
@@ -480,7 +466,6 @@ def my_profile():
                     msg = f"✅ Trusted Black Badge status updated for '{target_user}'!"
 
     current_user = session.get("username")
-    users = load_users() 
     user_data = users.get(current_user) if current_user else None
     
     view_user_name = request.args.get("user", current_user)
@@ -646,7 +631,7 @@ def admin_panel():
             l_name = request.form.get("l_name")
             l_org = request.form.get("l_org")
             l_expiry = request.form.get("l_expiry", "2027-01-01")
-            l_plan = request.form.get("l_plan", "Basic")
+            l_plan = request.form.get("l_plan", "Enterprise")
             l_user = request.form.get("l_user", "admin")
             l_pwd = request.form.get("l_pwd", "admin")
             
@@ -725,17 +710,16 @@ def admin_panel():
         </div>
 
         <div class="box">
-            <h3>🔑 License Management (Select Plan Tier: Basic - 2 Devices | Family - 5 Devices | Standard - 10 Devices | Business - Unlimited)</h3>
+            <h3>🔑 License Management (Create with Plan Tier & Expiry)</h3>
             <form method="POST" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:15px;">
                 <input type="hidden" name="action" value="add_license">
                 <input type="text" name="l_key" placeholder="License Key" required>
                 <input type="text" name="l_name" placeholder="Client Name" required>
                 <input type="text" name="l_org" placeholder="Organization" required>
                 <select name="l_plan">
-                    <option value="Basic (2 Devices)">Basic (2 Devices)</option>
-                    <option value="Family (5 Devices)">Family (5 Devices)</option>
-                    <option value="Standard (10 Devices)">Standard (10 Devices)</option>
-                    <option value="Business (Unlimited)">Business (Unlimited)</option>
+                    <option value="Enterprise">Enterprise Plan</option>
+                    <option value="Professional">Professional Plan</option>
+                    <option value="Standard">Standard Plan</option>
                 </select>
                 <input type="text" name="l_expiry" placeholder="Expiry (YYYY-MM-DD)" value="2027-01-01" required>
                 <input type="text" name="l_user" placeholder="Client User" value="admin" required>
@@ -743,7 +727,7 @@ def admin_panel():
                 <button type="submit" style="grid-column: 1 / -1;">Create License</button>
             </form>
             <table>
-                <tr><th>Key</th><th>Client</th><th>Org</th><th>Plan Tier (Device Limit)</th><th>Expiry</th><th>Client Credentials</th><th>Action</th></tr>
+                <tr><th>Key</th><th>Client</th><th>Org</th><th>Plan Tier</th><th>Expiry</th><th>Client Credentials</th><th>Action</th></tr>
                 {"".join([f'<tr><td><code>{k}</code></td><td>{v["name"]}</td><td>{v["org"]}</td><td><b>{v["plan"]}</b></td><td>{v["expiry"]}</td><td><code>{v.get("client_user","admin")} / {v.get("client_pwd","admin")}</code></td><td><form method="POST" style="margin:0;"><input type="hidden" name="action" value="delete_license"><input type="hidden" name="lic_key" value="{k}"><button type="submit" style="background:#ef4444; padding:4px 8px; font-size:11px;">Delete / Block</button></form></td></tr>' for k, v in licenses.items()]) if licenses else '<tr><td colspan="7" style="text-align:center; color:#94a3b8;">No licenses found.</td></tr>'}
             </table>
         </div>
@@ -949,4 +933,4 @@ def ticket_chat():
     """)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000)
