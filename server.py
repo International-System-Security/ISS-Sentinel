@@ -4,9 +4,8 @@ from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = "iss_enterprise_security_secret_key_v23"
+app.secret_key = "iss_enterprise_security_secret_key_v24"
 
-# Ensure absolute upload folder exists correctly
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -463,20 +462,21 @@ def my_profile():
             new_pwd = request.form.get("new_password", "").strip()
 
             if curr_uname in users:
+                target_key = curr_uname
                 if new_uname and new_uname != curr_uname:
                     if new_uname in users:
                         error = "Username already taken!"
                     else:
                         users[new_uname] = users.pop(curr_uname)
-                        curr_uname = new_uname
-                        session["username"] = curr_uname
+                        target_key = new_uname
+                        session["username"] = target_key
 
                 if new_pwd:
-                    users[curr_uname]["password"] = new_pwd
+                    users[target_key]["password"] = new_pwd
 
-                user_email = users[curr_uname]["email"]
+                user_email = users[target_key]["email"]
                 if user_email in admin_data:
-                    save_admin_data(user_email, curr_uname, users[curr_uname]["password"])
+                    save_admin_data(user_email, target_key, users[target_key]["password"])
 
                 save_all_users(users)
                 msg = "✅ Username and/or Password updated successfully!"
