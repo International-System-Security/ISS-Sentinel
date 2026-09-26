@@ -1,9 +1,9 @@
-from datetime import datetime, timedelta
+from flask import Flask, render_template_string, request, redirect, url_for, session
 import os
-from flask import Flask, redirect, render_template_string, request, session, url_for
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
-app.secret_key = "iss_enterprise_security_secret_key_v15"
+app.secret_key = "iss_enterprise_security_secret_key_v16"
 
 USER_FILE = "users.txt"
 POST_FILE = "posts.txt"
@@ -92,7 +92,6 @@ def load_users():
                         "last_active": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     }
     
-    # Sync admin accounts into users dict
     for em, data in admin_data.items():
         uname = data["username"]
         pwd = data["password"]
@@ -392,8 +391,8 @@ def my_profile():
                 return redirect(url_for("my_profile"))
 
         elif action == "login":
-            uname = request.form.get("username").strip()
             email = request.form.get("email").strip()
+            uname = request.form.get("username").strip()
             pwd = request.form.get("password").strip()
 
             if uname in users and users[uname]["password"] == pwd and users[uname]["email"] == email:
@@ -405,7 +404,7 @@ def my_profile():
                     return redirect(url_for("admin_panel"))
                 return redirect(url_for("my_profile"))
             else:
-                error = "Invalid username, email or password!"
+                error = "Invalid email, username or password!"
 
         elif action == "update_credentials" and "username" in session:
             curr_uname = session["username"]
@@ -424,7 +423,6 @@ def my_profile():
                 if new_pwd:
                     users[curr_uname]["password"] = new_pwd
 
-                # Also sync if admin credentials changed
                 user_email = users[curr_uname]["email"]
                 if user_email in admin_data:
                     save_admin_data(user_email, curr_uname, users[curr_uname]["password"])
@@ -538,21 +536,22 @@ def my_profile():
                 <button onclick="document.getElementById('reg-form').style.display='block'; document.getElementById('login-form').style.display='none';" style="background:#1e293b;">Register</button>
             </div>
 
+            <!-- Login Form (Email -> Username -> Password) -->
             <div id="login-form">
                 <h3>Account Login</h3>
-                <p style="font-size:12px; color:var(--text-muted);">Owner Login: <b>ibrahim / admin</b> ({OWNER_EMAIL})</p>
                 <form method="POST">
                     <input type="hidden" name="action" value="login">
-                    <label style="font-size:12px; color:var(--text-muted);">Username</label>
-                    <input type="text" name="username" required>
                     <label style="font-size:12px; color:var(--text-muted);">Email Address</label>
                     <input type="email" name="email" required>
+                    <label style="font-size:12px; color:var(--text-muted);">Username</label>
+                    <input type="text" name="username" required>
                     <label style="font-size:12px; color:var(--text-muted);">Password</label>
                     <input type="password" name="password" required>
                     <button type="submit">Login</button>
                 </form>
             </div>
 
+            <!-- Register Form -->
             <div id="reg-form" style="display:none;">
                 <h3>Join ISS Social (Register)</h3>
                 <form method="POST">
@@ -661,10 +660,9 @@ def admin_panel():
 
         {f'<div style="background: rgba(16,185,129,0.1); border: 1px solid #10b981; color: #34d399; padding: 12px; border-radius: 8px; margin-bottom: 20px;">{msg}</div>' if msg else ''}
 
-        <!-- Add New Admin Form (Email, Username, Password) -->
+        <!-- Add New Admin Form (Email -> Username -> Password) -->
         <div class="box">
             <h3>👥 Add New Admin</h3>
-            <p style="font-size:13px; color:#94a3b8;">Master Owner Email: <code style="color:#38bdf8;">{OWNER_EMAIL}</code>. Provide Email, Username, and Password to add a new administrator.</p>
             <form method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 15px;">
                 <input type="hidden" name="action" value="add_admin">
                 <div>
