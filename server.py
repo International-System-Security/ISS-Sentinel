@@ -1,4 +1,4 @@
-From flask import Flask, render_template_string, request, redirect, url_for, session
+from flask import Flask, render_template_string, request, redirect, url_for, session
 import os
 from datetime import datetime, timedelta
 import random
@@ -334,6 +334,8 @@ def client_dashboard():
     msg_status = ""
     test_result = session.get(f"test_result_{lic_key}", "")
     antivirus_active = session.get(f"av_active_{lic_key}", False)
+    show_popup = False
+    run_steps = session.get(f"run_steps_{lic_key}", False)
 
     if request.method == "POST":
         action = request.form.get("action")
@@ -345,7 +347,6 @@ def client_dashboard():
                 save_licenses(licenses)
                 msg_status = "✅ Email added successfully! Advanced features unlocked."
                 
-                # ওয়েলকাম বা কনফার্মেশন মেইল পাঠানো
                 sub = f"Welcome to ISS Security - {v['plan']} Features Unlocked"
                 body = f"""
                 <div style="font-family:'Segoe UI',sans-serif; background:#0b1120; color:#f8fafc; padding:20px; border-radius:10px;">
@@ -365,31 +366,94 @@ def client_dashboard():
             antivirus_active = True
         elif action == "run_test_virus":
             if antivirus_active:
-                is_success = random.choice([True, True, False])
-                test_result = "Success: Antivirus successfully neutralized the threat!" if is_success else "Failed: Threat bypassed defense!"
-                session[f"test_result_{lic_key}"] = test_result
-                
-                client_email = v.get('client_email')
-                if client_email and client_email != "client@iss.com":
-                    sub = f"Security Scan & Threat Simulation Report - {lic_key}"
-                    body = f"""
-                    <div style="font-family:'Segoe UI',sans-serif; background:#0b1120; color:#f8fafc; padding:20px; border-radius:10px;">
-                        <h3 style="color:#0ea5e9;">🛡️ ISS Endpoint Security Alert</h3>
-                        <p>Dear <b>{v['name']}</b>,</p>
-                        <p>A manual virus simulation test was executed on your device dashboard.</p>
-                        <p><b>Test Result:</b> <span style="color:{'#34d399' if 'Success' in test_result else '#fca5a5'};">{test_result}</span></p>
-                        <p><b>Organization:</b> {v['org']}</p>
-                        <p><b>Plan:</b> {v['plan']}</p>
-                        <br><p>Best regards,<br><b>ISS Security Team</b></p>
-                    </div>
-                    """
-                    send_automated_alert(client_email, sub, body)
+                show_popup = True
+                session[f"run_steps_{lic_key}"] = True
+                run_steps = True
+
+        elif action == "complete_virus_test":
+            is_success = random.choice([True, True, False])
+            test_result = "Success: Antivirus successfully neutralized the threat!" if is_success else "Failed: Threat bypassed defense!"
+            session[f"test_result_{lic_key}"] = test_result
+            session[f"run_steps_{lic_key}"] = False
+            run_steps = False
+            
+            client_email = v.get('client_email')
+            if client_email and client_email != "client@iss.com":
+                sub = f"Security Scan & Threat Simulation Report - {lic_key}"
+                body = f"""
+                <div style="font-family:'Segoe UI',sans-serif; background:#0b1120; color:#f8fafc; padding:20px; border-radius:10px;">
+                    <h3 style="color:#0ea5e9;">🛡️ ISS Endpoint Security Alert</h3>
+                    <p>Dear <b>{v['name']}</b>,</p>
+                    <p>A manual virus simulation test was executed on your device dashboard.</p>
+                    <p><b>Test Result:</b> <span style="color:{'#34d399' if 'Success' in test_result else '#fca5a5'};">{test_result}</span></p>
+                    <p><b>Organization:</b> {v['org']}</p>
+                    <p><b>Plan:</b> {v['plan']}</p>
+                    <br><p>Best regards,<br><b>ISS Security Team</b></p>
+                </div>
+                """
+                send_automated_alert(client_email, sub, body)
 
     return render_template_string("""
     <!DOCTYPE html>
     <html lang="en">
-    <head><title>Client Dashboard</title></head>
+    <head>
+        <title>Client Dashboard</title>
+        {% if show_popup or run_steps %}
+        <style>
+            .modal-overlay {
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 9999;
+            }
+            .modal-box {
+                background: #111827; border: 2px solid #ef4444; padding: 30px; border-radius: 12px; width: 450px; text-align: center; color: white;
+                box-shadow: 0 0 25px rgba(239, 68, 68, 0.4);
+            }
+            .step-item { background: #0b1120; margin: 8px 0; padding: 10px; border-radius: 6px; font-size: 13px; text-align: left; border-left: 3px solid #0ea5e9; }
+            .spinner { border: 3px solid #1e293b; border-top: 3px solid #38bdf8; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 15px auto; }
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        </style>
+        {% endif %}
+    </head>
     <body style="font-family:'Segoe UI'; background:#060913; color:white; padding:30px;">
+        
+        {% if show_popup or run_steps %}
+        <div class="modal-overlay" id="threatModal">
+            <div class="modal-box">
+                <h2 style="color: #ef4444; margin-top:0;">⚠️ Threat Detected! (Test Simulation)</h2>
+                <p style="font-size: 13px; color: #94a3b8;">A simulated virus has infected a protected node. Executing 6-step compliance & defense protocol...</p>
+                
+                <div style="margin: 20px 0;">
+                    <div class="step-item" id="step1">⏳ Step 1: Isolating infected endpoint network...</div>
+                    <div class="step-item" id="step2" style="display:none;">⏳ Step 2: Dumping system RAM for heuristic analysis...</div>
+                    <div class="step-item" id="step3" style="display:none;">⏳ Step 3: Terminating malicious payload processes...</div>
+                    <div class="step-item" id="step4" style="display:none;">⏳ Step 4: Quarantining compromised registry keys...</div>
+                    <div class="step-item" id="step5" style="display:none;">⏳ Step 5: Encrypting local temporary backup storage...</div>
+                    <div class="step-item" id="step6" style="display:none;">⏳ Step 6: Dispatching automated incident report to email...</div>
+                </div>
+
+                <div class="spinner" id="loadingSpinner"></div>
+
+                <form method="POST" id="finishForm" style="display:none;">
+                    <input type="hidden" name="action" value="complete_virus_test">
+                    <button type="submit" style="background:#10b981; color:white; padding:12px 20px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; width:100%; font-size:14px; margin-top:10px;">View Final Results & Report</button>
+                </form>
+            </div>
+        </div>
+
+        <script>
+            setTimeout(() => { document.getElementById('step1').innerHTML = '✅ Step 1: Endpoint isolated successfully.'; document.getElementById('step2').style.display = 'block'; }, 5000);
+            setTimeout(() => { document.getElementById('step2').innerHTML = '✅ Step 2: System RAM dump completed.'; document.getElementById('step3').style.display = 'block'; }, 10000);
+            setTimeout(() => { document.getElementById('step3').innerHTML = '✅ Step 3: Malicious processes terminated.'; document.getElementById('step4').style.display = 'block'; }, 15000);
+            setTimeout(() => { document.getElementById('step4').innerHTML = '✅ Step 4: Compromised registry keys quarantined.'; document.getElementById('step5').style.display = 'block'; }, 20000);
+            setTimeout(() => { document.getElementById('step5').innerHTML = '✅ Step 5: Backup storage secured.'; document.getElementById('step6').style.display = 'block'; }, 25000);
+            setTimeout(() => { 
+                document.getElementById('step6').innerHTML = '✅ Step 6: Incident report ready!'; 
+                document.getElementById('loadingSpinner').style.display = 'none';
+                document.getElementById('finishForm').style.display = 'block';
+            }, 30000);
+        </script>
+        {% endif %}
+
         <div style="max-width:650px; margin:0 auto; background:#111827; padding:30px; border-radius:12px; border:1px solid #1e293b;">
             <h2>🛡️ Client Security Dashboard</h2>
             <p>License Key: <code style="color:#38bdf8;">{{ lic_key }}</code> | Organization: <b>{{ v.org }}</b></p>
@@ -403,7 +467,7 @@ def client_dashboard():
                 <form method="POST">
                     <input type="hidden" name="action" value="save_client_email">
                     <input type="email" name="client_email" placeholder="Enter your email address (e.g. client@gmail.com)" value="{% if v.client_email != 'client@iss.com' %}{{ v.client_email }}{% endif %}" required style="width:100%; padding:12px; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box; margin-bottom:12px; font-size:14px;">
-                    <button type="submit" style="background:#f59e0b; color:#060913; padding:12px 20px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; width:100%; font-size:14px;">Save Email & Unlock Advanced Features</button>
+                    <button type="submit" style="background:#f59e0b; color:#0b1120; padding:12px 20px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; width:100%; font-size:14px;">Save Email & Unlock Advanced Features</button>
                 </form>
             </div>
 
@@ -443,9 +507,7 @@ def client_dashboard():
         </div>
     </body>
     </html>
-    """, lic_key=lic_key, v=v, antivirus_active=antivirus_active, test_result=test_result, msg_status=msg_status)
+    """, lic_key=lic_key, v=v, antivirus_active=antivirus_active, test_result=test_result, msg_status=msg_status, show_popup=show_popup, run_steps=run_steps)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
-
- l.
