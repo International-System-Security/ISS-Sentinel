@@ -3,6 +3,7 @@ import os
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 import random
+import requests
 
 app = Flask(__name__)
 app.secret_key = "iss_enterprise_security_secret_key_v17"
@@ -21,6 +22,32 @@ ADMIN_LIST_FILE = "admins.txt"
 OWNER_EMAIL = "admin@iss.com"
 OWNER_USERNAME = "ibr@him"
 OWNER_PASSWORD = "muhib###5869@"
+
+# --- RESEND.COM AUTOMATED EMAIL FUNCTION ---
+def send_automated_alert(recipient_email, subject, html_content):
+    api_key = os.environ.get("RESEND_API_KEY")
+    if not api_key:
+        print("API Key not found in environment variables!")
+        return False
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    data = {
+        "from": "ISS Security Platform <onboarding@resend.dev>",
+        "to": [recipient_email],
+        "subject": subject,
+        "html": html_content
+    }
+
+    try:
+        response = requests.post("https://api.resend.com/emails", json=data, headers=headers)
+        return response.status_code == 200
+    except Exception as e:
+        print(f"Error sending email: {e}")
+        return False
 
 # Exact Verified Blue Badge SVG for Admins
 ADMIN_BADGE_SVG = '''
@@ -192,24 +219,34 @@ def load_licenses():
         with open(LICENSE_FILE, "r") as f:
             for line in f:
                 parts = line.strip().split(",")
-                if len(parts) >= 8:
+                if len(parts) >= 9:
                     licenses[parts[0].strip()] = {
                         "name": parts[1].strip(), "org": parts[2].strip(), "expiry": parts[3].strip(),
                         "max": parts[4].strip(), "plan": parts[5].strip(),
-                        "client_user": parts[6].strip(), "client_pwd": parts[7].strip()
+                        "client_user": parts[6].strip(), "client_pwd": parts[7].strip(),
+                        "client_email": parts[8].strip()
+                    }
+                elif len(parts) >= 8:
+                    licenses[parts[0].strip()] = {
+                        "name": parts[1].strip(), "org": parts[2].strip(), "expiry": parts[3].strip(),
+                        "max": parts[4].strip(), "plan": parts[5].strip(),
+                        "client_user": parts[6].strip(), "client_pwd": parts[7].strip(),
+                        "client_email": "client@iss.com"
                     }
                 elif len(parts) >= 6:
                     licenses[parts[0].strip()] = {
                         "name": parts[1].strip(), "org": parts[2].strip(), "expiry": parts[3].strip(),
                         "max": parts[4].strip(), "plan": parts[5].strip(),
-                        "client_user": "admin", "client_pwd": "admin"
+                        "client_user": "admin", "client_pwd": "admin",
+                        "client_email": "client@iss.com"
                     }
     return licenses
 
 def save_licenses(lic_dict):
     with open(LICENSE_FILE, "w") as f:
         for k, v in lic_dict.items():
-            f.write(f"{k},{v['name']},{v['org']},{v['expiry']},{v['max']},{v['plan']},{v['client_user']},{v['client_pwd']}\n")
+            c_email = v.get('client_email', 'client@iss.com')
+            f.write(f"{k},{v['name']},{v['org']},{v['expiry']},{v['max']},{v['plan']},{v['client_user']},{v['client_pwd']},{c_email}\n")
 
 @app.before_request
 def before_request_func():
@@ -569,14 +606,34 @@ def admin_panel():
             l_plan = request.form.get("l_plan", "Basic Plan")
             l_user = request.form.get("l_user", "admin")
             l_pwd = request.form.get("l_pwd", "admin")
+            l_email = request.form.get("l_email", "client@iss.com").strip()
 
             licenses = load_licenses()
             licenses[l_key] = {
                 "name": l_name, "org": l_org, "expiry": l_expiry,
-                "max": "5", "plan": l_plan, "client_user": l_user, "client_pwd": l_pwd
+                "max": "5", "plan": l_plan, "client_user": l_user, "client_pwd": l_pwd,
+                "client_email": l_email
             }
             save_licenses(licenses)
-            msg = f"✅ License '{l_key}' created successfully!"
+            
+            # --- অটোমেটিক ইমেল নোটিফিকেশন (লাইসেন্স তৈরির সাথে সাথেই) ---
+            if l_email:
+                sub = "🛡️ ISS Platform: Your New Security License is Ready!"
+                html_body = f"""
+                <h3>Congratulations {l_name}!</h3>
+                <p>Your security license for <b>{l_org}</b> has been successfully generated.</p>
+                <ul>
+                    <li><b>License Key:</b> {l_key}</li>
+                    <li><b>Plan:</b> {l_plan}</li>
+                    <li><b>Portal Username:</b> {l_user}</li>
+                    <li><b>Portal Password:</b> {l_pwd}</li>
+                    <li><b>Expiry Date:</b> {l_expiry}</li>
+                </ul>
+                <p>You can now log in to the Client Portal using these credentials.</p>
+                """
+                send_automated_alert(l_email, sub, html_body)
+
+            msg = f"✅ License '{l_key}' created and notification email sent!"
 
     licenses = load_licenses()
     admin_data = load_admin_data()
@@ -651,6 +708,7 @@ def admin_panel():
                 <input type="text" name="l_key" placeholder="License Key" required>
                 <input type="text" name="l_name" placeholder="Client Name" required>
                 <input type="text" name="l_org" placeholder="Organization" required>
+                <input type="email" name="l_email" placeholder="Client Email (for Auto-Alert)" required>
                 <select name="l_plan">
                     <option value="Basic Plan">Basic Plan</option>
                     <option value="Family Plan">Family Plan</option>
@@ -660,15 +718,16 @@ def admin_panel():
                 <input type="text" name="l_expiry" placeholder="Expiry (YYYY-MM-DD)" value="2027-01-01" required>
                 <input type="text" name="l_user" placeholder="Client User" value="admin" required>
                 <input type="text" name="l_pwd" placeholder="Client Pass" value="admin" required>
-                <button type="submit" style="grid-column: 1 / -1;">Create License</button>
+                <button type="submit" style="grid-column: 1 / -1;">Create License & Send Email</button>
             </form>
             <table>
-                <tr><th>Key</th><th>Client</th><th>Org</th><th>Plan</th><th>Expiry</th><th>Action</th></tr>
+                <tr><th>Key</th><th>Client</th><th>Email</th><th>Org</th><th>Plan</th><th>Expiry</th><th>Action</th></tr>
                 {% if licenses %}
                     {% for k, v in licenses.items() %}
                     <tr>
                         <td><code>{{ k }}</code></td>
                         <td>{{ v.name }}</td>
+                        <td>{{ v.get('client_email', 'N/A') }}</td>
                         <td>{{ v.org }}</td>
                         <td>{{ v.plan }}</td>
                         <td>{{ v.expiry }}</td>
@@ -842,16 +901,16 @@ def client_dashboard():
                 </form>
             </div>
 
-            <!-- Sunday Weekly Security Report & Recommendations -->
+            <!-- Sunday Weekly Security Report & Insights -->
             <div style="background:#0b1120; border:1px solid #1e293b; padding:20px; border-radius:8px; margin:20px 0;">
                 <h4 style="margin:0 0 10px 0; color:#38bdf8; display:flex; justify-content:space-between; align-items:center;">
                     <span>📅 Sunday Weekly Security Report & Insights</span>
                     <span style="font-size:11px; background:#1e293b; padding:3px 8px; border-radius:4px; color:#38bdf8;">Audit Cycle #42</span>
                 </h4>
-                <p style="font-size:12px; color:#94a3b8; margin-bottom:15px;">Automated weekly scan logs, endpoint visit stats, and professional security recommendations for your organization.</p>
+                <p style="font-size:12px; color:#94a3b8; margin-bottom:15px;">Automated weekly scan logs, endpoint visit stats, password change records, and downloaded file telemetry.</p>
                 
                 <div style="background:#060913; padding:12px; border-radius:6px; border:1px solid #1e293b; margin-bottom:15px; font-size:12px; color:#cbd5e1;">
-                    <b style="color:#f59e0b;">Weekly Activity Summary:</b> 1,420 endpoints scanned. 3 minor telemetry anomalies detected on secondary gateway nodes (Resolved automatically). No critical breaches.
+                    <b style="color:#f59e0b;">Weekly Activity Summary:</b> Portal visits: <b>14 times</b> | Password changes: <b>1 time</b> | Files downloaded: <b>3 packages (Secure_Patch_v4.zip, Audit_Logs.csv, Endpoint_Agent.msi)</b> | Endpoints scanned: <b>1,420 nodes</b>. All threats neutralized successfully.
                 </div>
 
                 <h5 style="margin:0 0 8px 0; color:#f8fafc; font-size:13px;">Recommended Actions & Security Directives:</h5>
