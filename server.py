@@ -4,6 +4,8 @@ from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 import random
 import requests
+import threading
+import time
 
 app = Flask(__name__)
 app.secret_key = "iss_enterprise_security_secret_key_v17"
@@ -48,6 +50,35 @@ def send_automated_alert(recipient_email, subject, html_content):
     except Exception as e:
         print(f"Error sending email: {e}")
         return False
+
+# --- BACKGROUND DAILY REPORT SENDER ---
+def background_daily_reporter():
+    while True:
+        # প্রতি ২৪ ঘণ্টা পরপর (৮৬৪০০ সেকেন্ড) অটোমেটিক সব লাইসেন্সধারীকে প্রতিদিনের রিপোর্ট মেইল পাঠাবে
+        time.sleep(86400) 
+        try:
+            licenses = load_licenses()
+            for lic_key, v in licenses.items():
+                client_email = v.get('client_email')
+                if client_email and client_email != "client@iss.com":
+                    sub = "Daily Security & Activity Report - ISS Platform"
+                    body = f"""
+                    <p>Dear {v['name']},</p>
+                    <p>Here is your daily automated security audit report from International System Security (ISS).</p>
+                    <ul>
+                        <li><b>Organization:</b> {v['org']}</li>
+                        <li><b>Plan:</b> {v['plan']}</li>
+                        <li><b>Status:</b> All endpoints secured and monitored. No active threats.</li>
+                    </ul>
+                    <p>Login to your portal: <a href="https://iss-antivirus-cloud.onrender.com/client-login">Client Portal</a></p>
+                    <br><p>Best regards,<br>ISS Security Team</p>
+                    """
+                    send_automated_alert(client_email, sub, body)
+        except Exception as e:
+            print(f"Background Reporter Error: {e}")
+
+# ব্যাকগ্রাউন্ডে প্রতিদিনের মেইল পাঠানোর প্রসেস রান করা
+threading.Thread(target=background_daily_reporter, daemon=True).start()
 
 # Exact Verified Blue Badge SVG for Admins
 ADMIN_BADGE_SVG = '''
@@ -616,7 +647,7 @@ def admin_panel():
             }
             save_licenses(licenses)
             
-            # --- ক্লায়েন্টের জিমেইলে অটোমেটিক মেইল পাঠানো ---
+            # --- লাইসেন্স তৈরির সাথে সাথেই ক্লায়েন্টের জিমেইলে আপনার নির্দিষ্ট ফরম্যাটে মেইল পাঠানো ---
             if l_email:
                 sub = "Welcome to ISS – Security Agent Setup"
                 html_body = f"""
@@ -633,7 +664,7 @@ def admin_panel():
                 """
                 send_automated_alert(l_email, sub, html_body)
 
-            msg = f"✅ License '{l_key}' created and email sent to {l_email}!"
+            msg = f"✅ License '{l_key}' created and setup email sent!"
 
     licenses = load_licenses()
     admin_data = load_admin_data()
@@ -702,13 +733,13 @@ def admin_panel():
         </div>
 
         <div class="box">
-            <h3>🔑 License Management (With Auto-Email)</h3>
+            <h3>🔑 License Management (With Auto-Email Setup)</h3>
             <form method="POST" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:15px;">
                 <input type="hidden" name="action" value="add_license">
                 <input type="text" name="l_key" placeholder="License Key" required>
                 <input type="text" name="l_name" placeholder="Client Name" required>
                 <input type="text" name="l_org" placeholder="Organization" required>
-                <input type="email" name="l_email" placeholder="Client Email (Required for Mail)" required>
+                <input type="email" name="l_email" placeholder="Client Email (For Auto Mail)" required>
                 <select name="l_plan">
                     <option value="Basic Plan">Basic Plan</option>
                     <option value="Family Plan">Family Plan</option>
@@ -718,7 +749,7 @@ def admin_panel():
                 <input type="text" name="l_expiry" placeholder="Expiry (YYYY-MM-DD)" value="2027-01-01" required>
                 <input type="text" name="l_user" placeholder="Client User" value="admin" required>
                 <input type="text" name="l_pwd" placeholder="Client Pass" value="admin" required>
-                <button type="submit" style="grid-column: 1 / -1; background:#10b981;">Create License & Send Email Automatically</button>
+                <button type="submit" style="grid-column: 1 / -1; background:#10b981;">Create License & Email Credentials</button>
             </form>
             <table>
                 <tr><th>Key</th><th>Client Name</th><th>Client Email</th><th>Org</th><th>Plan</th><th>Expiry</th><th>Action</th></tr>
@@ -800,7 +831,7 @@ def admin_tickets():
     </html>
     """, tickets=tickets, selected_tid=selected_tid)
 
-# --- 3. CLIENT PANEL ---
+# --- 3. CLIENT PANEL (CLEAN & SECURE) ---
 @app.route("/client-login", methods=["GET", "POST"])
 def client_login():
     error_msg = ""
@@ -899,29 +930,6 @@ def client_dashboard():
                         {% if not antivirus_active %}Activate Antivirus{% else %}Re-Verify Antivirus{% endif %}
                     </button>
                 </form>
-            </div>
-
-            <!-- Sunday Weekly Security Report & Insights -->
-            <div style="background:#0b1120; border:1px solid #1e293b; padding:20px; border-radius:8px; margin:20px 0;">
-                <h4 style="margin:0 0 10px 0; color:#38bdf8; display:flex; justify-content:space-between; align-items:center;">
-                    <span>📅 Sunday Weekly Security Report & Insights</span>
-                    <span style="font-size:11px; background:#1e293b; padding:3px 8px; border-radius:4px; color:#38bdf8;">Audit Cycle #42</span>
-                </h4>
-                <p style="font-size:12px; color:#94a3b8; margin-bottom:15px;">Automated weekly scan logs, endpoint visit stats, password change records, and downloaded file telemetry.</p>
-                
-                <div style="background:#060913; padding:12px; border-radius:6px; border:1px solid #1e293b; margin-bottom:15px; font-size:12px; color:#cbd5e1;">
-                    <b style="color:#f59e0b;">Weekly Activity Summary:</b> Portal visits: <b>14 times</b> | Password changes: <b>1 time</b> | Files downloaded: <b>3 packages (Secure_Patch_v4.zip, Audit_Logs.csv, Endpoint_Agent.msi)</b> | Endpoints scanned: <b>1,420 nodes</b>. All threats neutralized successfully.
-                </div>
-
-                <h5 style="margin:0 0 8px 0; color:#f8fafc; font-size:13px;">Recommended Actions & Security Directives:</h5>
-                <ul style="margin:0; padding-left:18px; font-size:12px; color:#94a3b8; line-height:1.6;">
-                    <li><strong style="color:#e2e8f0;">1. Subnet Isolation:</strong> Isolate guest Wi-Fi segments from primary operational VLANs to reduce lateral threat movement.</li>
-                    <li><strong style="color:#e2e8f0;">2. Credential Rotation:</strong> Enforce mandatory password rotation for all administrative accounts within the next 14 days.</li>
-                    <li><strong style="color:#e2e8f0;">3. Endpoint Firmware:</strong> Update edge firewall firmware to version 4.12.1 to patch recent heuristic bypass vulnerabilities.</li>
-                    <li><strong style="color:#e2e8f0;">4. Session Timeout:</strong> Reduce maximum idle session duration to 15 minutes for high-privilege workstations.</li>
-                    <li><strong style="color:#e2e8f0;">5. Log Archival:</strong> Ensure weekly audit logs are successfully backed up to cold storage to comply with retention policies.</li>
-                    <li><strong style="color:#e2e8f0;">6. MFA Enforcement:</strong> Verify that multi-factor authentication is active across all registered client portal users.</li>
-                </ul>
             </div>
 
             <!-- Test Virus Simulation Section -->
