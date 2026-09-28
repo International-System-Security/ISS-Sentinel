@@ -3,15 +3,7 @@
 «Next-Generation Antivirus & Real-Time Threat Detection System
 Developed by ISS — International System Security»
 
-<div align="center">"ISS-Sentinel" (https://img.shields.io/badge/ISS--Sentinel-Security-00ff9c?style=for-the-badge&logo=shield&logoColor=white)
-"Status" (https://img.shields.io/badge/Status-Online-success?style=for-the-badge)
-"Python" (https://img.shields.io/badge/Python-3.x-blue?style=for-the-badge&logo=python&logoColor=white)
-"Flask" (https://img.shields.io/badge/Flask-Web%20API-black?style=for-the-badge&logo=flask&logoColor=white)
-"Platform" (https://img.shields.io/badge/Platform-Cloud-orange?style=for-the-badge)
-"License" (https://img.shields.io/badge/License-MIT-lightgrey?style=for-the-badge)
-
-</div>---
-
+� � � � � �
 🛡️ ISS — International System Security
 
 ISS-Sentinel is a cybersecurity project developed under the International System Security (ISS) ecosystem.
