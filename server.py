@@ -846,13 +846,18 @@ def client_dashboard():
             <div style="background:#0b1120; border:1px solid #1e293b; padding:15px; border-radius:8px; margin:20px 0; text-align:center;">
                 <h4 style="margin:0 0 8px 0; color:#38bdf8;">🧪 Test Virus Simulation</h4>
                 {% if antivirus_active %}
-                    <form method="POST">
+                    <!-- Added popup alert on click -->
+                    <form method="POST" onsubmit="alert('⚠️ WARNING: Virus simulation or threat detected on system!');">
                         <input type="hidden" name="action" value="run_test_virus">
                         <button type="submit" style="background:#8b5cf6; color:white; padding:10px 20px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
                             Test
                         </button>
                     </form>
                     {% if test_result %}
+                        <script>
+                            // Popup alert showing the scan result instantly
+                            alert("🛡️ Security Scan Result: {{ test_result }}");
+                        </script>
                         <div style="margin-top: 15px; padding: 10px; border-radius: 6px; font-weight: bold; background: {% if 'Success' in test_result %}rgba(16,185,129,0.2); color:#34d399; border:1px solid #10b981{% else %}rgba(239,68,68,0.2); color:#fca5a5; border:1px solid #ef4444{% endif %};">
                             {{ test_result }}
                         </div>
