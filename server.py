@@ -917,7 +917,7 @@ def ticket_chat():
             <a href="/" style="color:#38bdf8; font-size:13px; text-decoration:none;">&larr; Return Home</a>
             <hr style="border-color:#1e293b; margin:15px 0;">
             <div style="background:#060913; height:240px; overflow-y:auto; border:1px solid #1e293b; padding:10px; border-radius:6px; margin-bottom:12px;">
-                {% if my_msgs %}
+                {% if my_msg %}
                     {% for m in my_msgs %}
                     <div style='background:#111827; padding:8px 12px; margin:6px 0; border-radius:6px; font-size:13px;'>{{ m }}</div>
                     {% endfor %}
