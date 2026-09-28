@@ -1,136 +1,491 @@
-from flask import Flask, render_template_string, jsonify, request
+from flask import Flask, render_template_string, request, redirect, url_for, session
+import os
+from datetime import datetime, timedelta
+import random
+import requests
+import threading
 import time
 
 app = Flask(__name__)
+app.secret_key = "iss_security_secret_key_v102"
 
-# ফ্রন্টএন্ড এবং ব্যাকএন্ড একসাথে রাখার জন্য একটি সিম্পল টেমপ্লেট
-HTML_TEMPLATE = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Security & Antivirus Scanner</title>
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 50px; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .scanner-card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 450px; text-align: center; }
-        h2 { color: #333; margin-bottom: 20px; }
-        .btn { background: #007bff; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; width: 100%; transition: 0.3s; }
-        .btn:hover { background: #0056b3; }
-        .steps-container { text-align: left; margin-top: 20px; display: none; }
-        .step-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; font-size: 14px; color: #555; }
-        .status { font-weight: bold; }
-        .pending { color: #f39c12; }
-        .success { color: #28a745; }
-        .failed { color: #dc3545; }
-        /* Popup Modal */
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
-        .modal-content { background: white; padding: 25px; border-radius: 8px; width: 350px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-        .modal-content h3 { color: #dc3545; margin-top: 0; }
-        .close-btn { background: #dc3545; color: white; border: none; padding: 8px 15px; margin-top: 15px; border-radius: 4px; cursor: pointer; }
-    </style>
-</head>
-<body>
+LICENSE_FILE = "licenses.txt"
+OWNER_USERNAME = "ibr@him"
+OWNER_PASSWORD = "muhib###5869@"
 
-<div class="scanner-card">
-    <h2>System Vulnerability & Virus Scanner</h2>
-    <button class="btn" onclick="startScan()">Start Security Scan</button>
-    
-    <div class="steps-container" id="stepsContainer">
-        <!-- Steps will be dynamically inserted here -->
-    </div>
-</div>
+# --- RESEND EMAIL FUNCTION ---
+def send_automated_alert(recipient_email, subject, html_content):
+    api_key = os.environ.get("RESEND_API_KEY")
+    if not api_key:
+        print("Resend API Key missing!")
+        return False
 
-<!-- Alert Popup Modal -->
-<div class="modal" id="alertModal">
-    <div class="modal-content">
-        <h3 id="modalTitle">Security Alert</h3>
-        <p id="modalMessage">Virus detected in the system!</p>
-        <button class="close-btn" onclick="closeModal()">Acknowledge & Close</button>
-    </div>
-</div>
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "from": "ISS Security Platform <onboarding@resend.dev>",
+        "to": [recipient_email],
+        "subject": subject,
+        "html": html_content
+    }
 
-<script>
-    const steps = [
-        "Checking your device integrity...",
-        "Detecting active virus signatures...",
-        "Scanning system memory & processes...",
-        "Analyzing network packets & firewall...",
-        "Inspecting browser extensions & cookies...",
-        "Verifying system registry files..."
-    ];
+    try:
+        response = requests.post("https://api.resend.com/emails", json=data, headers=headers)
+        return response.status_code == 200
+    except Exception as e:
+        print(f"Email Send Error: {e}")
+        return False
 
-    function startScan() {
-        const container = document.getElementById('stepsContainer');
-        container.style.display = 'block';
-        container.innerHTML = '';
+# --- BACKGROUND WEEKLY REPORT SENDER ---
+def background_weekly_reporter():
+    while True:
+        time.sleep(604800) 
+        try:
+            licenses = load_licenses()
+            for lic_key, v in licenses.items():
+                client_email = v.get('client_email')
+                if client_email and client_email != "client@iss.com":
+                    sub = "Weekly Security Audit Report - ISS Platform"
+                    body = f"""
+                    <div style="font-family:'Segoe UI',sans-serif; background:#060913; color:#f8fafc; padding:20px; border-radius:10px;">
+                        <h2 style="color:#0ea5e9;">🛡️ ISS Weekly Security Audit Report</h2>
+                        <p>Dear <b>{v['name']}</b>,</p>
+                        <p>Here is your weekly automated security status report for organization: <b>{v['org']}</b>.</p>
+                        <hr style="border-color:#1e293b;">
+                        <ul>
+                            <li><b>Subscription Plan:</b> {v['plan']}</li>
+                            <li><b>License Key:</b> <code style="color:#38bdf8;">{lic_key}</code></li>
+                            <li><b>Expiry Date:</b> {v['expiry']}</li>
+                            <li><b>Endpoint Status:</b> All protected nodes are secure.</li>
+                        </ul>
+                        <p>Access your portal here: <a href="https://iss-antivirus-cloud.onrender.com/client-login" style="color:#38bdf8;">Client Portal Login</a></p>
+                        <br><p>Best regards,<br><b>ISS Enterprise Security Team</b></p>
+                    </div>
+                    """
+                    send_automated_alert(client_email, sub, body)
+        except Exception as e:
+            print(f"Weekly Reporter Error: {e}")
 
-        // Render all steps as Pending initially
-        steps.forEach((stepText, index) => {
-            container.innerHTML += `
-                <div class="step-item">
-                    <span>${index + 1}. ${stepText}</span>
-                    <span class="status pending" id="step-${index}">Pending...</span>
-                </div>
-            `;
-        });
+threading.Thread(target=background_weekly_reporter, daemon=True).start()
 
-        // Execute steps sequentially with a delay (e.g., 2 to 3 seconds per step for UX, can be adjusted)
-        let currentStep = 0;
-        
-        function processNextStep() {
-            if (currentStep < steps.length) {
-                const statusSpan = document.getElementById(`step-${currentStep}`);
-                
-                // Simulate processing time
-                setTimeout(() => {
-                    // Logic: Let's assume step 2 or a test condition triggers detection, or everything passes successfully.
-                    // Here we can make step 2 or 5 show infected/failed or success based on your requirement.
-                    if (currentStep === 1) { 
-                        // Example: Triggering virus detection simulation on step 2
-                        statusSpan.className = "status failed";
-                        statusSpan.innerText = "❌ Infected";
-                        showPopup("Virus Threat Detected!", "Critical Warning: Real/Test Virus signature identified in system memory!");
-                    } else {
-                        statusSpan.className = "status success";
-                        statusSpan.innerText = "✔ Success";
+def load_licenses():
+    licenses = {}
+    if os.path.exists(LICENSE_FILE):
+        with open(LICENSE_FILE, "r") as f:
+            for line in f:
+                parts = line.strip().split(",")
+                if len(parts) >= 9:
+                    licenses[parts[0].strip()] = {
+                        "name": parts[1].strip(), "org": parts[2].strip(), "expiry": parts[3].strip(),
+                        "max": parts[4].strip(), "plan": parts[5].strip(),
+                        "client_user": parts[6].strip(), "client_pwd": parts[7].strip(),
+                        "client_email": parts[8].strip()
                     }
-                    
-                    currentStep++;
-                    if (currentStep < steps.length && statusSpan.className !== "status failed") {
-                        processNextStep();
-                    } else if (currentStep === steps.length) {
-                        // Final Success check if no major blocks occurred
-                        setTimeout(() => {
-                            // If it passes all layers without failing
-                            console.log("Scan completed successfully.");
-                        }, 500);
+                elif len(parts) >= 8:
+                    licenses[parts[0].strip()] = {
+                        "name": parts[1].strip(), "org": parts[2].strip(), "expiry": parts[3].strip(),
+                        "max": parts[4].strip(), "plan": parts[5].strip(),
+                        "client_user": parts[6].strip(), "client_pwd": parts[7].strip(),
+                        "client_email": "client@iss.com"
                     }
-                }, 2000); // প্রতি ধাপের জন্য ২ সেকেন্ড করে ডিলে (আপনার ইচ্ছেমতো বাড়িয়ে ৩০ সেকেন্ড বা কম-বেশি করতে পারেন)
-            }
-        }
+    return licenses
 
-        processNextStep();
-    }
+def save_licenses(lic_dict):
+    with open(LICENSE_FILE, "w") as f:
+        for k, v in lic_dict.items():
+            c_email = v.get('client_email', 'client@iss.com')
+            f.write(f"{k},{v['name']},{v['org']},{v['expiry']},{v['max']},{v['plan']},{v['client_user']},{v['client_pwd']},{c_email}\n")
 
-    function showPopup(title, message) {
-        document.getElementById('modalTitle').innerText = title;
-        document.getElementById('modalMessage').innerText = message;
-        document.getElementById('alertModal').style.display = 'flex';
-    }
-
-    function closeModal() {
-        document.getElementById('alertModal').style.display = 'none';
-    }
-</script>
-
-</body>
-</html>
-"""
-
-@app.route('/')
+# --- HOME ---
+@app.route("/")
 def home():
-    return render_template_string(HTML_TEMPLATE)
+    current_user = session.get("username")
+    is_admin = current_user == OWNER_USERNAME
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head><title>ISS Security Platform</title></head>
+    <body style="font-family:'Segoe UI'; background:#060913; color:#f8fafc; text-align:center; padding:50px;">
+        <h1>🛡️ ISS Cloud Security Platform</h1>
+        <p style="color:#94a3b8;">Next-Generation Endpoint Protection & License Management</p>
+        <div style="margin-top:30px;">
+            {% if current_user %}
+                <p style="color:#34d399; font-weight:bold;">Welcome, Admin</p>
+                <a href="/admin" style="background:#0ea5e9; color:white; padding:10px 20px; text-decoration:none; border-radius:6px; font-weight:bold; margin-right:10px;">Admin Panel</a>
+                <a href="/client-login" style="background:#10b981; color:white; padding:10px 20px; text-decoration:none; border-radius:6px; font-weight:bold; margin-right:10px;">Client Portal</a>
+                <a href="/logout" style="color:#ef4444; text-decoration:none; font-weight:bold;">Logout</a>
+            {% else %}
+                <a href="/client-login" style="background:#0ea5e9; color:white; padding:12px 25px; text-decoration:none; border-radius:6px; font-weight:bold; margin-right:15px;">Client Portal Login</a>
+                <a href="/my-profile" style="background:#1e293b; color:white; padding:12px 25px; text-decoration:none; border-radius:6px; font-weight:bold;">Admin Login</a>
+            {% endif %}
+        </div>
+    </body>
+    </html>
+    """, current_user=current_user, is_admin=is_admin)
 
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+# --- ADMIN LOGIN ---
+@app.route("/my-profile", methods=["GET", "POST"])
+def my_profile():
+    error = ""
+    if request.method == "POST":
+        uname = request.form.get("username", "").strip()
+        pwd = request.form.get("password", "").strip()
+        if uname == OWNER_USERNAME and pwd == OWNER_PASSWORD:
+            session["username"] = OWNER_USERNAME
+            return redirect(url_for("admin_panel"))
+        else:
+            error = "Invalid Admin Credentials!"
+
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head><title>Admin Login</title></head>
+    <body style="font-family:'Segoe UI'; background:#060913; color:white; display:flex; justify-content:center; align-items:center; height:100vh; margin:0;">
+        <div style="background:#111827; padding:35px; border-radius:12px; width:340px; border:1px solid #1e293b;">
+            <h2>Admin Login</h2>
+            {% if error %}<div style="color:#fca5a5; font-size:13px; margin-bottom:10px;">{{ error }}</div>{% endif %}
+            <form method="POST">
+                <input type="text" name="username" placeholder="Username" required style="width:100%; padding:10px; margin:8px 0 12px 0; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
+                <input type="password" name="password" placeholder="Password" required style="width:100%; padding:10px; margin:8px 0 15px 0; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
+                <button type="submit" style="width:100%; padding:12px; background:#0ea5e9; border:none; color:white; font-weight:bold; border-radius:6px; cursor:pointer;">Login</button>
+            </form>
+            <br><a href="/" style="color:#38bdf8; font-size:13px; text-decoration:none;">&larr; Home</a>
+        </div>
+    </body>
+    </html>
+    """, error=error)
+
+@app.route("/logout")
+def logout():
+    session.pop("username", None)
+    return redirect(url_for("home"))
+
+# --- ADMIN PANEL ---
+@app.route("/admin", methods=["GET", "POST"])
+def admin_panel():
+    if session.get("username") != OWNER_USERNAME:
+        return redirect(url_for("my_profile"))
+
+    msg = ""
+    if request.method == "POST":
+        action = request.form.get("action")
+        if action == "delete_license":
+            lic_key = request.form.get("lic_key")
+            licenses = load_licenses()
+            if lic_key in licenses:
+                del licenses[lic_key]
+                save_licenses(licenses)
+                msg = f"🗑️ License '{lic_key}' deleted successfully!"
+        elif action == "add_license":
+            l_key = request.form.get("l_key").strip()
+            l_name = request.form.get("l_name").strip()
+            l_org = request.form.get("l_org").strip()
+            l_plan = request.form.get("l_plan")
+            l_expiry = request.form.get("l_expiry").strip()
+            l_user = request.form.get("l_user").strip()
+            l_pwd = request.form.get("l_pwd").strip()
+
+            licenses = load_licenses()
+            licenses[l_key] = {
+                "name": l_name, "org": l_org, "expiry": l_expiry,
+                "max": "5", "plan": l_plan, "client_user": l_user, "client_pwd": l_pwd,
+                "client_email": "client@iss.com"
+            }
+            save_licenses(licenses)
+            msg = f"✅ License '{l_key}' created successfully!"
+
+    licenses = load_licenses()
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head><title>Admin Panel</title></head>
+    <body style="font-family:'Segoe UI'; background:#060913; color:white; padding:30px;">
+        <div style="max-width:900px; margin:0 auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#111827; padding:15px 20px; border-radius:8px; border:1px solid #1e293b; margin-bottom:20px;">
+                <h2>🛡️ Admin Panel</h2>
+                <a href="/" style="color:#38bdf8; text-decoration:none;">&larr; Home</a>
+            </div>
+
+            {% if msg %}<div style="background:rgba(16,185,129,0.1); border:1px solid #10b981; color:#34d399; padding:12px; border-radius:8px; margin-bottom:20px;">{{ msg }}</div>{% endif %}
+
+            <div style="background:#111827; padding:25px; border-radius:12px; border:2px solid #0ea5e9; margin-bottom:25px;">
+                <h3 style="color:#38bdf8; margin-top:0;">🔑 Create New License</h3>
+                <form method="POST">
+                    <input type="hidden" name="action" value="add_license">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                        <div>
+                            <label style="display:block; color:#38bdf8; font-size:12px; margin-bottom:5px;">License Key</label>
+                            <input type="text" name="l_key" placeholder="ISS-1001" required style="width:100%; padding:10px; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block; color:#38bdf8; font-size:12px; margin-bottom:5px;">Client Name</label>
+                            <input type="text" name="l_name" placeholder="John Doe" required style="width:100%; padding:10px; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block; color:#38bdf8; font-size:12px; margin-bottom:5px;">Organization</label>
+                            <input type="text" name="l_org" placeholder="Company Ltd" required style="width:100%; padding:10px; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block; color:#38bdf8; font-size:12px; margin-bottom:5px;">Subscription Plan</label>
+                            <select name="l_plan" style="width:100%; padding:10px; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
+                                <option value="Basic Plan">Basic Plan</option>
+                                <option value="Family Plan">Family Plan</option>
+                                <option value="Standard Plan">Standard Plan</option>
+                                <option value="Business Plan">Business Plan</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display:block; color:#38bdf8; font-size:12px; margin-bottom:5px;">Expiry Date</label>
+                            <input type="text" name="l_expiry" value="2027-01-01" required style="width:100%; padding:10px; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block; color:#38bdf8; font-size:12px; margin-bottom:5px;">Portal Username</label>
+                            <input type="text" name="l_user" value="admin" required style="width:100%; padding:10px; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
+                        </div>
+                        <div style="grid-column: 1 / -1;">
+                            <label style="display:block; color:#38bdf8; font-size:12px; margin-bottom:5px;">Portal Password</label>
+                            <input type="text" name="l_pwd" value="admin" required style="width:100%; padding:10px; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
+                        </div>
+                    </div>
+                    <button type="submit" style="width:100%; padding:14px; background:#10b981; border:none; color:white; font-weight:bold; border-radius:6px; cursor:pointer; font-size:15px;">🚀 Create License</button>
+                </form>
+            </div>
+
+            <div style="background:#111827; padding:25px; border-radius:12px; border:1px solid #1e293b;">
+                <h3>Active Licenses</h3>
+                <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+                    <tr><th style="border:1px solid #1e293b; padding:10px; background:#1a2234; text-align:left;">Key</th><th style="border:1px solid #1e293b; padding:10px; background:#1a2234; text-align:left;">Client Email</th><th style="border:1px solid #1e293b; padding:10px; background:#1a2234; text-align:left;">Plan</th><th style="border:1px solid #1e293b; padding:10px; background:#1a2234; text-align:left;">Action</th></tr>
+                    {% for k, v in licenses.items() %}
+                    <tr>
+                        <td style="border:1px solid #1e293b; padding:10px;"><code>{{ k }}</code></td>
+                        <td style="border:1px solid #1e293b; padding:10px; color:#38bdf8;">{{ v.get('client_email', 'Not Added') }}</td>
+                        <td style="border:1px solid #1e293b; padding:10px;">{{ v.plan }}</td>
+                        <td style="border:1px solid #1e293b; padding:10px;">
+                            <form method="POST" style="margin:0;">
+                                <input type="hidden" name="action" value="delete_license">
+                                <input type="hidden" name="lic_key" value="{{ k }}">
+                                <button type="submit" style="background:#ef4444; border:none; color:white; padding:5px 10px; border-radius:4px; cursor:pointer;">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+    </body>
+    </html>
+    """, msg=msg, licenses=licenses)
+
+# --- CLIENT LOGIN ---
+@app.route("/client-login", methods=["GET", "POST"])
+def client_login():
+    error_msg = ""
+    if request.method == "POST":
+        lic_key = request.form.get("lic_key", "").strip()
+        c_user = request.form.get("c_user", "").strip()
+        c_pwd = request.form.get("c_pwd", "").strip()
+
+        licenses = load_licenses()
+        if lic_key in licenses:
+            stored_user = licenses[lic_key].get("client_user", "admin")
+            stored_pwd = licenses[lic_key].get("client_pwd", "admin")
+            if c_user == stored_user and c_pwd == stored_pwd:
+                session["client_license"] = lic_key
+                return redirect(url_for("client_dashboard"))
+            else:
+                error_msg = "Incorrect Username or Password!"
+        else:
+            error_msg = "Invalid License ID!"
+
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head><title>Client Portal Login</title></head>
+    <body style="font-family:'Segoe UI'; background:#060913; color:white; display:flex; justify-content:center; align-items:center; height:100vh; margin:0;">
+        <div style="background:#111827; padding:35px; border-radius:12px; width:360px; border:1px solid #1e293b;">
+            <h2>Client Portal Login</h2>
+            {% if error_msg %}<div style="color:#fca5a5; font-size:13px; margin-bottom:10px;">{{ error_msg }}</div>{% endif %}
+            <form method="POST">
+                <label style="font-size:12px; color:#94a3b8;">License Key</label>
+                <input type="text" name="lic_key" required style="width:100%; padding:10px; margin:5px 0 12px 0; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
+                <label style="font-size:12px; color:#94a3b8;">Username</label>
+                <input type="text" name="c_user" required style="width:100%; padding:10px; margin:5px 0 12px 0; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
+                <label style="font-size:12px; color:#94a3b8;">Password</label>
+                <input type="password" name="c_pwd" required style="width:100%; padding:10px; margin:5px 0 15px 0; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
+                <button type="submit" style="width:100%; padding:12px; background:#0ea5e9; border:none; color:white; font-weight:bold; border-radius:6px; cursor:pointer;">Login</button>
+            </form>
+            <br><a href="/" style="color:#38bdf8; font-size:13px; text-decoration:none;">&larr; Return to Home</a>
+        </div>
+    </body>
+    </html>
+    """, error_msg=error_msg)
+
+# --- CLIENT DASHBOARD (WITH MULTI-STEP SCANNER & POPUP) ---
+@app.route("/client-dashboard", methods=["GET", "POST"])
+def client_dashboard():
+    lic_key = session.get("client_license")
+    licenses = load_licenses()
+    if not lic_key or lic_key not in licenses:
+        return redirect(url_for("client_login"))
+
+    v = licenses[lic_key]
+    msg_status = ""
+
+    if request.method == "POST":
+        action = request.form.get("action")
+        if action == "save_client_email":
+            new_email = request.form.get("client_email", "").strip()
+            if new_email:
+                v['client_email'] = new_email
+                licenses[lic_key] = v
+                save_licenses(licenses)
+                msg_status = "✅ Email added successfully! Advanced features unlocked."
+                
+                sub = f"Welcome to ISS Security - {v['plan']} Features Unlocked"
+                body = f"""
+                <div style="font-family:'Segoe UI',sans-serif; background:#0b1120; color:#f8fafc; padding:20px; border-radius:10px;">
+                    <h2 style="color:#0ea5e9;">🛡️ ISS Security Features Unlocked</h2>
+                    <p>Dear <b>{v['name']}</b>,</p>
+                    <p>Your email has been successfully registered for organization: <b>{v['org']}</b>.</p>
+                    <p><b>Subscription Plan:</b> {v['plan']}</p>
+                    <p><b>License Key:</b> <code style="color:#38bdf8;">{lic_key}</code></p>
+                    <p>You will now receive weekly automated audit reports and instant threat alerts on this email.</p>
+                    <br><p>Best regards,<br><b>ISS Security Team</b></p>
+                </div>
+                """
+                send_automated_alert(new_email, sub, body)
+
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <title>Client Dashboard</title>
+        <style>
+            /* Popup Modal CSS */
+            .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; }
+            .modal-content { background: #111827; padding: 30px; border-radius: 12px; width: 380px; text-align: center; border: 2px solid #ef4444; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+            .modal-content h3 { color: #fca5a5; margin-top: 0; }
+            .close-btn { background: #ef4444; color: white; border: none; padding: 10px 20px; margin-top: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+            
+            /* Scanner Steps CSS */
+            .step-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #1e293b; font-size: 14px; color: #94a3b8; }
+            .status { font-weight: bold; }
+            .pending { color: #f59e0b; }
+            .success { color: #34d399; }
+            .failed { color: #ef4444; }
+        </style>
+    </head>
+    <body style="font-family:'Segoe UI'; background:#060913; color:white; padding:30px;">
+        <div style="max-width:650px; margin:0 auto; background:#111827; padding:30px; border-radius:12px; border:1px solid #1e293b;">
+            <h2>🛡️ Client Security Dashboard</h2>
+            <p>License Key: <code style="color:#38bdf8;">{{ lic_key }}</code> | Organization: <b>{{ v.org }}</b></p>
+            
+            {% if msg_status %}<div style="background:rgba(16,185,129,0.1); border:1px solid #10b981; color:#34d399; padding:12px; border-radius:8px; margin-bottom:20px;">{{ msg_status }}</div>{% endif %}
+
+            <!-- ADD EMAIL FOR UNLOCK FEATURES -->
+            <div style="background:#0b1120; border:2px solid #f59e0b; padding:22px; border-radius:10px; margin:20px 0;">
+                <h3 style="margin:0 0 8px 0; color:#f59e0b;">📧 Add Email for Unlock More Features</h3>
+                <p style="font-size:13px; color:#94a3b8; margin:0 0 15px 0;">Enter your email to activate weekly automated security audit reports and instant virus threat alerts.</p>
+                <form method="POST">
+                    <input type="hidden" name="action" value="save_client_email">
+                    <input type="email" name="client_email" placeholder="Enter your email address..." value="{% if v.client_email != 'client@iss.com' %}{{ v.client_email }}{% endif %}" required style="width:100%; padding:12px; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box; margin-bottom:12px;">
+                    <button type="submit" style="background:#f59e0b; color:#060913; padding:12px 20px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; width:100%;">Save Email & Unlock Features</button>
+                </form>
+            </div>
+
+            <!-- MULTI-STEP ANTIVIRUS & THREAT SCANNER -->
+            <div style="background:#0b1120; border:1px solid #1e293b; padding:20px; border-radius:8px; margin:20px 0;">
+                <h4 style="margin:0 0 8px 0; color:#38bdf8;">🧪 Advanced Threat & Antivirus Scanner</h4>
+                <p style="font-size:12px; color:#94a3b8; margin:0 0 15px 0;">Run 6-layer comprehensive system security verification.</p>
+                <button onclick="startMultiStepScan()" style="background:#8b5cf6; color:white; padding:12px 20px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; width:100%;">
+                    Start Comprehensive Scan
+                </button>
+                
+                <div id="stepsContainer" style="margin-top:20px; display:none;">
+                    <!-- Steps injected dynamically -->
+                </div>
+            </div>
+
+            <br><a href="/" style="color:#ef4444; font-size:13px; text-decoration:none; font-weight:bold;">Logout / Home</a>
+        </div>
+
+        <!-- Popup Modal -->
+        <div class="modal" id="alertModal">
+            <div class="modal-content">
+                <h3 id="modalTitle">Security Alert</h3>
+                <p id="modalMessage" style="color:#cbd5e1; font-size:14px;"></p>
+                <button class="close-btn" onclick="closeModal()">Acknowledge & Close</button>
+            </div>
+        </div>
+
+        <script>
+            const scanSteps = [
+                "Checking your device integrity...",
+                "Detecting active virus signatures...",
+                "Scanning system memory & processes...",
+                "Analyzing network packets & firewall...",
+                "Inspecting browser extensions & cookies...",
+                "Verifying system registry files..."
+            ];
+
+            function startMultiStepScan() {
+                const container = document.getElementById('stepsContainer');
+                container.style.display = 'block';
+                container.innerHTML = '';
+
+                scanSteps.forEach((stepText, index) => {
+                    container.innerHTML += `
+                        <div class="step-item">
+                            <span><b>Step ${index + 1}:</b> ${stepText}</span>
+                            <span class="status pending" id="step-${index}">Pending...</span>
+                        </div>
+                    `;
+                });
+
+                let currentStep = 0;
+
+                function processStep() {
+                    if (currentStep < scanSteps.length) {
+                        const statusSpan = document.getElementById(`step-${currentStep}`);
+                        
+                        // প্রতি ধাপে নির্দিষ্ট সময় পর আপডেট হবে (যেমন ২ সেকেন্ড বা আপনার চাহিদা অনুযায়ী)
+                        setTimeout(() => {
+                            // উদাহরণের জন্য ধরে নিই ২য় ধাপে ভাইরাস বা থ্রেট ডিটেক্ট হতে পারে
+                            if (currentStep === 1) {
+                                statusSpan.className = "status failed";
+                                statusSpan.innerText = "❌ Infected";
+                                showPopup("Critical Virus Threat Detected!", "Warning: Real/Test virus signature identified in active system memory. Threat isolated successfully!");
+                            } else {
+                                statusSpan.className = "status success";
+                                statusSpan.innerText = "✔ Success";
+                            }
+
+                            currentStep++;
+                            if (currentStep < scanSteps.length && statusSpan.className !== "status failed") {
+                                processStep();
+                            }
+                        }, 2000); 
+                    }
+                }
+
+                processStep();
+            }
+
+            function showPopup(title, message) {
+                document.getElementById('modalTitle').innerText = title;
+                document.getElementById('modalMessage').innerText = message;
+                document.getElementById('alertModal').style.display = 'flex';
+            }
+
+            function closeModal() {
+                document.getElementById('alertModal').style.display = 'none';
+            }
+        </script>
+    </body>
+    </html>
+    """, lic_key=lic_key, v=v, msg_status=msg_status)
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
