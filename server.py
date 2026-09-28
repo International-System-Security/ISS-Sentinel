@@ -1,4 +1,4 @@
-from flask import Flask, render_template_string, request, redirect, url_for, session
+From flask import Flask, render_template_string, request, redirect, url_for, session
 import os
 from datetime import datetime, timedelta
 import random
@@ -333,7 +333,6 @@ def client_dashboard():
     v = licenses[lic_key]
     msg_status = ""
     test_result = session.get(f"test_result_{lic_key}", "")
-    scan_result = session.get(f"scan_result_{lic_key}", "")
     antivirus_active = session.get(f"av_active_{lic_key}", False)
 
     if request.method == "POST":
@@ -346,6 +345,7 @@ def client_dashboard():
                 save_licenses(licenses)
                 msg_status = "✅ Email added successfully! Advanced features unlocked."
                 
+                # ওয়েলকাম বা কনফার্মেশন মেইল পাঠানো
                 sub = f"Welcome to ISS Security - {v['plan']} Features Unlocked"
                 body = f"""
                 <div style="font-family:'Segoe UI',sans-serif; background:#0b1120; color:#f8fafc; padding:20px; border-radius:10px;">
@@ -384,18 +384,6 @@ def client_dashboard():
                     </div>
                     """
                     send_automated_alert(client_email, sub, body)
-                    
-        elif action == "run_manual_scan":
-            if antivirus_active:
-                target_name = request.form.get("scan_target", "").strip()
-                if target_name:
-                    # সিমুলেটেড স্ক্যান লজিক
-                    is_malicious = "malware" in target_name.lower() or "virus" in target_name.lower() or "bad" in target_name.lower()
-                    if is_malicious:
-                        scan_result = f"⚠️ Warning: Threat detected in '{target_name}'! Quarantined successfully."
-                    else:
-                        scan_result = f"✅ Safe: '{target_name}' scanned. No threats found."
-                    session[f"scan_result_{lic_key}"] = scan_result
 
     return render_template_string("""
     <!DOCTYPE html>
@@ -432,28 +420,6 @@ def client_dashboard():
                 </form>
             </div>
 
-            <!-- MANUAL FILE / URL SCAN FEATURE -->
-            <div style="background:#0b1120; border:1px solid #1e293b; padding:20px; border-radius:8px; margin:20px 0; text-align:center;">
-                <h4 style="margin:0 0 8px 0; color:#38bdf8;">🔍 Manual File / URL Security Scan</h4>
-                <p style="font-size:13px; color:#94a3b8; margin:0 0 15px 0;">Scan any file path or suspicious URL for potential malware.</p>
-                {% if antivirus_active %}
-                    <form method="POST">
-                        <input type="hidden" name="action" value="run_manual_scan">
-                        <input type="text" name="scan_target" placeholder="Enter file name or URL (e.g., malware.exe)" required style="width:100%; padding:10px; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box; margin-bottom:10px; font-size:13px;">
-                        <button type="submit" style="background:#0ea5e9; color:white; padding:10px 20px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; width:100%;">
-                            Start Security Scan
-                        </button>
-                    </form>
-                    {% if scan_result %}
-                        <div style="margin-top:15px; padding:10px; border-radius:6px; font-weight:bold; background:{% if 'Safe' in scan_result %}rgba(16,185,129,0.2); color:#34d399; border:1px solid #10b981{% else %}rgba(239,68,68,0.2); color:#fca5a5; border:1px solid #ef4444{% endif %};">
-                            {{ scan_result }}
-                        </div>
-                    {% endif %}
-                {% else %}
-                    <p style="font-size:12px; color:#fca5a5;">Activate protection first to run scans.</p>
-                {% endif %}
-            </div>
-
             <div style="background:#0b1120; border:1px solid #1e293b; padding:20px; border-radius:8px; margin:20px 0; text-align:center;">
                 <h4 style="margin:0 0 8px 0; color:#38bdf8;">🧪 Test Virus Simulation (Sends Instant Email)</h4>
                 {% if antivirus_active %}
@@ -477,7 +443,9 @@ def client_dashboard():
         </div>
     </body>
     </html>
-    """, lic_key=lic_key, v=v, antivirus_active=antivirus_active, test_result=test_result, scan_result=scan_result, msg_status=msg_status)
+    """, lic_key=lic_key, v=v, antivirus_active=antivirus_active, test_result=test_result, msg_status=msg_status)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
+
+ l.
