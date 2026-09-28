@@ -616,20 +616,20 @@ def admin_panel():
             }
             save_licenses(licenses)
             
-            # --- অটোমেটিক ইমেল নোটিফিকেশন (লাইসেন্স তৈরির সাথে সাথেই) ---
+            # --- আপনার ফরম্যাট অনুযায়ী অটোমেটিক ইমেল নোটিফিকেশন ---
             if l_email:
-                sub = "🛡️ ISS Platform: Your New Security License is Ready!"
+                sub = "Welcome to ISS – Security Agent Setup"
                 html_body = f"""
-                <h3>Congratulations {l_name}!</h3>
-                <p>Your security license for <b>{l_org}</b> has been successfully generated.</p>
-                <ul>
-                    <li><b>License Key:</b> {l_key}</li>
-                    <li><b>Plan:</b> {l_plan}</li>
-                    <li><b>Portal Username:</b> {l_user}</li>
-                    <li><b>Portal Password:</b> {l_pwd}</li>
-                    <li><b>Expiry Date:</b> {l_expiry}</li>
-                </ul>
-                <p>You can now log in to the Client Portal using these credentials.</p>
+                <p>Dear {l_name},</p>
+                <p>Thank you for choosing International System Security (ISS).</p>
+                <p><b>Plan:</b> {l_plan}</p>
+                <p><b>License Key:</b> {l_key}</p>
+                <p><b>Cloud Server:</b> <a href="https://iss-antivirus-cloud.onrender.com">https://iss-antivirus-cloud.onrender.com</a></p>
+                <br>
+                <p>Your dashboard link:<br>
+                <a href="https://iss-antivirus-cloud.onrender.com/client-login">https://iss-antivirus-cloud.onrender.com/client-login</a></p>
+                <br>
+                <p>Best regards,<br>ISS Security Team</p>
                 """
                 send_automated_alert(l_email, sub, html_body)
 
