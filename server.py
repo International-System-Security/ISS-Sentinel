@@ -1,4 +1,4 @@
-from flask import Flask, render_template_string, request, redirect, url_for, session
+From flask import Flask, render_template_string, request, redirect, url_for, session
 import os
 from datetime import datetime, timedelta
 import random
@@ -333,7 +333,6 @@ def client_dashboard():
     v = licenses[lic_key]
     msg_status = ""
     test_result = session.get(f"test_result_{lic_key}", "")
-    scan_result = session.get(f"scan_result_{lic_key}", "")
     antivirus_active = session.get(f"av_active_{lic_key}", False)
 
     if request.method == "POST":
@@ -385,32 +384,6 @@ def client_dashboard():
                     </div>
                     """
                     send_automated_alert(client_email, sub, body)
-                    
-        elif action == "run_file_scan":
-            if antivirus_active:
-                # নতুন যুক্ত করা ভাইরাস স্ক্যান ফিচার
-                scanned_files_count = random.randint(120, 450)
-                threats_found = random.choice([0, 0, 0, 1]) # বেশিরভাগ সময় নিরাপদ দেখাবে
-                if threats_found > 0:
-                    scan_result = f"⚠️ Warning: Scanned {scanned_files_count} files. 1 suspicious threat detected and quarantined!"
-                else:
-                    scan_result = f"✅ Clean: Scanned {scanned_files_count} files. No viruses or threats found."
-                session[f"scan_result_{lic_key}"] = scan_result
-                
-                client_email = v.get('client_email')
-                if client_email and client_email != "client@iss.com":
-                    sub = f"Full System Virus Scan Report - {lic_key}"
-                    body = f"""
-                    <div style="font-family:'Segoe UI',sans-serif; background:#0b1120; color:#f8fafc; padding:20px; border-radius:10px;">
-                        <h3 style="color:#0ea5e9;">🛡️ ISS Full System Scan Results</h3>
-                        <p>Dear <b>{v['name']}</b>,</p>
-                        <p>Your scheduled/manual system virus scan has completed.</p>
-                        <p><b>Scan Summary:</b> <span style="color:{'#34d399' if 'Clean' in scan_result else '#fca5a5'};">{scan_result}</span></p>
-                        <p><b>Organization:</b> {v['org']}</p>
-                        <br><p>Best regards,<br><b>ISS Security Team</b></p>
-                    </div>
-                    """
-                    send_automated_alert(client_email, sub, body)
 
     return render_template_string("""
     <!DOCTYPE html>
@@ -447,33 +420,12 @@ def client_dashboard():
                 </form>
             </div>
 
-            <!-- VIRUS & FILE SCAN FEATURE -->
-            <div style="background:#0b1120; border:1px solid #1e293b; padding:20px; border-radius:8px; margin:20px 0; text-align:center;">
-                <h4 style="margin:0 0 8px 0; color:#38bdf8;">🔍 Full System & File Virus Scan</h4>
-                <p style="font-size:13px; color:#94a3b8; margin:0 0 15px 0;">Scan system files for malware and suspicious activities.</p>
-                {% if antivirus_active %}
-                    <form method="POST">
-                        <input type="hidden" name="action" value="run_file_scan">
-                        <button type="submit" style="background:#0ea5e9; color:white; padding:10px 20px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
-                            Start Virus Scan
-                        </button>
-                    </form>
-                    {% if scan_result %}
-                        <div style="margin-top:15px; padding:10px; border-radius:6px; font-weight:bold; background:{% if 'Clean' in scan_result %}rgba(16,185,129,0.2); color:#34d399; border:1px solid #10b981{% else %}rgba(239,68,68,0.2); color:#fca5a5; border:1px solid #ef4444{% endif %};">
-                            {{ scan_result }}
-                        </div>
-                    {% endif %}
-                {% else %}
-                    <p style="font-size:12px; color:#fca5a5;">Activate protection first to run virus scan.</p>
-                {% endif %}
-            </div>
-
             <div style="background:#0b1120; border:1px solid #1e293b; padding:20px; border-radius:8px; margin:20px 0; text-align:center;">
                 <h4 style="margin:0 0 8px 0; color:#38bdf8;">🧪 Test Virus Simulation (Sends Instant Email)</h4>
                 {% if antivirus_active %}
                     <form method="POST">
                         <input type="hidden" name="action" value="run_test_virus">
-                        <button type="submit" style="background:#8b5cf6; color:white; padding:10px 20px; border-none; border-radius:6px; font-weight:bold; cursor:pointer;">
+                        <button type="submit" style="background:#8b5cf6; color:white; padding:10px 20px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
                             Run Threat Test & Email Report
                         </button>
                     </form>
@@ -491,7 +443,9 @@ def client_dashboard():
         </div>
     </body>
     </html>
-    """, lic_key=lic_key, v=v, antivirus_active=antivirus_active, test_result=test_result, scan_result=scan_result, msg_status=msg_status)
+    """, lic_key=lic_key, v=v, antivirus_active=antivirus_active, test_result=test_result, msg_status=msg_status)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
+
+ 
