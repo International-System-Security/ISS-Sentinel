@@ -1,4 +1,4 @@
-From flask import Flask, render_template_string, request, redirect, url_for, session
+from flask import Flask, render_template_string, request, redirect, url_for, session
 import os
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
@@ -54,7 +54,6 @@ def send_automated_alert(recipient_email, subject, html_content):
 # --- BACKGROUND WEEKLY REPORT SENDER ---
 def background_weekly_reporter():
     while True:
-        # প্রতি ৭ দিন পরপর (৬০৪৮০০ সেকেন্ড) অটোমেটিক উইকলি রিপোর্ট মেইল পাঠাবে
         time.sleep(604800) 
         try:
             licenses = load_licenses()
@@ -84,7 +83,6 @@ def background_weekly_reporter():
 
 threading.Thread(target=background_weekly_reporter, daemon=True).start()
 
-# Exact Verified Blue Badge SVG for Admins
 ADMIN_BADGE_SVG = '''
 <svg width="16" height="16" viewBox="0 0 24 24" fill="#0ea5e9" style="vertical-align: middle; margin-left: 4px;" title="Verified Admin">
     <path d="M12 2L14.34 3.73L17.25 3.5L18.77 6.04L21.5 7.15L21.57 10.12L23.75 12.12L22.12 14.75L22.5 17.75L19.75 19L18.38 21.62L15.5 21.37L13.38 23.25L10.62 22.25L8.12 23.37L6.38 21.12L3.62 20.37L3.12 17.5L0.87 15.62L2.12 12.87L0.87 10.12L3.12 8.25L3.87 5.5L6.62 5.12L8.5 2.87L11.25 3.87L12 2Z" fill="#0ea5e9"/>
@@ -651,7 +649,6 @@ def admin_panel():
             }
             save_licenses(licenses)
             
-            # --- লাইসেন্স ক্রিয়েটের সাথে সাথেই জিমেইলে সব বিবরণসহ ইমেল পাঠানো ---
             if l_email:
                 sub = f"Your ISS Security License & Subscription Details ({l_plan})"
                 html_body = f"""
@@ -749,7 +746,6 @@ def admin_panel():
             <a href="/admin/tickets" style="display:inline-block; background:#0284c7; color:white; padding:10px 18px; text-decoration:none; border-radius:6px; font-weight:bold; font-size:13px;">Open All Support Tickets</a>
         </div>
 
-        <!-- 🔑 LICENSE MANAGEMENT WITH CLEAR EMAIL BOX -->
         <div class="box" style="border: 2px solid #0ea5e9;">
             <h3 style="color: #38bdf8;">🔑 License Management & Automatic Email Dispatcher</h3>
             <p style="font-size:13px; color:#94a3b8; margin-bottom:15px;">Fill out the form below. Entering the Client Email will instantly dispatch credentials, plan details, and portal links to the client's Gmail upon creation.</p>
@@ -931,6 +927,7 @@ def client_dashboard():
     msg_status = ""
     test_result = session.get(f"test_result_{lic_key}", "")
     antivirus_active = session.get(f"av_active_{lic_key}", False)
+    run_audit = session.get(f"run_audit_{lic_key}", False)
 
     if request.method == "POST":
         action = request.form.get("action")
@@ -938,6 +935,10 @@ def client_dashboard():
             session[f"av_active_{lic_key}"] = True
             msg_status = "🛡️ Antivirus successfully activated!"
             antivirus_active = True
+        elif action == "run_security_audit":
+            if antivirus_active:
+                session[f"run_audit_{lic_key}"] = True
+                run_audit = True
         elif action == "run_test_virus":
             if antivirus_active:
                 is_success = random.choice([True, True, False])
@@ -947,7 +948,6 @@ def client_dashboard():
                     test_result = "Failed: Threat bypassed the antivirus defense!"
                 session[f"test_result_{lic_key}"] = test_result
                 
-                # --- ভাইরাস টেস্ট করার সাথে সাথেই জিমেইলে রিপোর্ট পাঠানো ---
                 client_email = v.get('client_email')
                 if client_email and client_email != "client@iss.com":
                     sub = f"Security Scan & Threat Simulation Report - {lic_key}"
@@ -963,7 +963,6 @@ def client_dashboard():
                     </div>
                     """
                     send_automated_alert(client_email, sub, body)
-
         else:
             user_msg = request.form.get("message")
             if user_msg:
@@ -976,8 +975,47 @@ def client_dashboard():
     return render_template_string("""
     <!DOCTYPE html>
     <html lang="en">
-    <head><title>Client Security Dashboard</title></head>
+    <head>
+        <title>Client Security Dashboard</title>
+        <style>
+            /* Modal Overlay for 6-Step Audit Simulation */
+            .modal-overlay {
+                display: {% if run_audit and not test_result %}flex{% else %}none{% endif %};
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(6, 9, 19, 0.85); z-index: 9999;
+                justify-content: center; align-items: center;
+            }
+            .modal-box {
+                background: #111827; border: 1px solid #0ea5e9; padding: 30px;
+                border-radius: 12px; width: 450px; text-align: center; box-shadow: 0 10px 30px rgba(14, 165, 233, 0.2);
+            }
+            .step-item {
+                background: #0b1120; margin: 8px 0; padding: 10px 15px; border-radius: 6px;
+                font-size: 13px; text-align: left; border-left: 4px solid #334155; opacity: 0.4; transition: all 0.3s ease;
+            }
+            .step-item.active { border-left-color: #f59e0b; opacity: 1; color: #f59e0b; }
+            .step-item.completed { border-left-color: #10b981; opacity: 1; color: #34d399; }
+        </style>
+    </head>
     <body style="font-family:'Segoe UI'; background:#060913; color:white; padding:20px;">
+        
+        <!-- 6-STEP AUDIT & SIMULATION POPUP MODAL -->
+        <div class="modal-overlay" id="auditModal">
+            <div class="modal-box">
+                <h3 style="color:#0ea5e9; margin-top:0;">🛡️ Executing 6-Step Security Audit</h3>
+                <p style="font-size:12px; color:#94a3b8;">Please wait while our heuristic engine inspects your system nodes...</p>
+                <div style="margin: 20px 0;">
+                    <div class="step-item" id="step1">Step 1: Initializing Secure Memory Sandbox...</div>
+                    <div class="step-item" id="step2">Step 2: Deep Scanning Kernel & Driver Signatures...</div>
+                    <div class="step-item" id="step3">Step 3: Analyzing Heuristic & Behavioral Signatures...</div>
+                    <div class="step-item" id="step4">Step 4: Injecting Sandbox Dummy Payload for Testing...</div>
+                    <div class="step-item" id="step5">Step 5: Verifying Firewall & Endpoint Quarantine...</div>
+                    <div class="step-item" id="step6">Step 6: Compiling Final Threat Report & Dispatching Alert...</div>
+                </div>
+                <div id="modalLoading" style="color:#38bdf8; font-size:13px; font-weight:bold;">Running audit steps (~30 seconds)...</div>
+            </div>
+        </div>
+
         <div style="max-width:700px; margin:0 auto; background:#111827; padding:30px; border-radius:12px; border:1px solid #1e293b;">
             <h2>🛡️ Client Security Dashboard</h2>
             <p>License Key: <code style="color:#38bdf8;">{{ lic_key }}</code> | Organization: <b>{{ v.org }}</b></p>
@@ -999,14 +1037,14 @@ def client_dashboard():
             <div style="background:#0b1120; border:1px solid #1e293b; padding:15px; border-radius:8px; margin:20px 0; text-align:center;">
                 <h4 style="margin:0 0 8px 0; color:#38bdf8;">🧪 Test Virus Simulation (Triggers Instant Email)</h4>
                 {% if antivirus_active %}
-                    <form method="POST">
-                        <input type="hidden" name="action" value="run_test_virus">
-                        <button type="submit" style="background:#8b5cf6; color:white; padding:10px 20px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; width:auto;">
-                            Run Threat Test & Email Report
+                    <form method="POST" onsubmit="startAuditProcess()">
+                        <input type="hidden" name="action" value="run_security_audit">
+                        <button type="submit" style="background:#8b5cf6; color:white; padding:10px 20px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; width:auto;" id="runAuditBtn">
+                            Run Threat Test & 6-Step Audit Report
                         </button>
                     </form>
                     {% if test_result %}
-                        <div style="margin-top: 15px; padding: 10px; border-radius: 6px; font-weight: bold; background: {% if 'Success' in test_result %}rgba(16,185,129,0.2); color:#34d399; border:1px solid #10b981{% else %}rgba(239,68,68,0.2); color:#fca5a5; border:1px solid #ef4444{% endif %};">
+                        <div style="margin-top: 15px; padding: 12px; border-radius: 6px; font-weight: bold; background: {% if 'Success' in test_result %}rgba(16,185,129,0.2); color:#34d399; border:1px solid #10b981{% else %}rgba(239,68,68,0.2); color:#fca5a5; border:1px solid #ef4444{% endif %};">
                             {{ test_result }}
                         </div>
                     {% endif %}
@@ -1036,9 +1074,44 @@ def client_dashboard():
             </form>
             <br><a href="/" style="color:#ef4444; font-size:13px; text-decoration:none;">Logout / Home</a>
         </div>
+
+        <script>
+            function startAuditProcess() {
+                // If modal is triggered, run sequential step simulation (~30 seconds total, 5 seconds per step)
+                let steps = ['step1', 'step2', 'step3', 'step4', 'step5', 'step6'];
+                let current = 0;
+                
+                document.getElementById('auditModal').style.display = 'flex';
+                
+                function runNextStep() {
+                    if (current < steps.length) {
+                        if (current > 0) {
+                            document.getElementById(steps[current - 1]).classList.remove('active');
+                            document.getElementById(steps[current - 1]).classList.add('completed');
+                            document.getElementById(steps[current - 1]).innerHTML = document.getElementById(steps[current - 1]).innerHTML.replace('...', ' [DONE]');
+                        }
+                        document.getElementById(steps[current]).classList.add('active');
+                        current++;
+                        setTimeout(runNextStep, 5000); // 5 seconds per step = 30 seconds total
+                    } else {
+                        // After 6 steps finish, submit the actual virus test action to backend
+                        let form = document.createElement('form');
+                        form.method = 'POST';
+                        let input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'action';
+                        input.value = 'run_test_virus';
+                        form.appendChild(input);
+                        document.body.appendChild(form);
+                        form.submit();
+                    }
+                }
+                setTimeout(runNextStep, 500);
+            }
+        </script>
     </body>
     </html>
-    """, lic_key=lic_key, v=v, antivirus_active=antivirus_active, msg_status=msg_status, my_msgs=my_msgs, test_result=test_result)
+    """, lic_key=lic_key, v=v, antivirus_active=antivirus_active, msg_status=msg_status, my_msgs=my_msgs, test_result=test_result, run_audit=run_audit)
 
 @app.route("/ticket-chat", methods=["GET", "POST"])
 def ticket_chat():
@@ -1082,5 +1155,3 @@ def ticket_chat():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
-
- 
