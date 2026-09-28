@@ -54,7 +54,6 @@ def send_automated_alert(recipient_email, subject, html_content):
 # --- BACKGROUND WEEKLY REPORT SENDER ---
 def background_weekly_reporter():
     while True:
-        # প্রতি ৭ দিন পরপর (৬০৪৮০০ সেকেন্ড) অটোমেটিক উইকলি রিপোর্ট মেইল পাঠাবে
         time.sleep(604800) 
         try:
             licenses = load_licenses()
@@ -72,7 +71,7 @@ def background_weekly_reporter():
                             <li><b>Subscription Plan:</b> {v['plan']}</li>
                             <li><b>License Key:</b> <code style="color:#38bdf8;">{lic_key}</code></li>
                             <li><b>Expiry Date:</b> {v['expiry']}</li>
-                            <li><b>Endpoint Status:</b> All protected nodes are secure. No heuristic threats detected.</li>
+                            <li><b>Endpoint Status:</b> All protected nodes are secure. No active threats.</li>
                         </ul>
                         <p>Access your portal here: <a href="https://iss-antivirus-cloud.onrender.com/client-login" style="color:#38bdf8;">Client Portal Login</a></p>
                         <br><p>Best regards,<br><b>ISS Enterprise Security Team</b></p>
@@ -84,7 +83,6 @@ def background_weekly_reporter():
 
 threading.Thread(target=background_weekly_reporter, daemon=True).start()
 
-# Exact Verified Blue Badge SVG for Admins
 ADMIN_BADGE_SVG = '''
 <svg width="16" height="16" viewBox="0 0 24 24" fill="#0ea5e9" style="vertical-align: middle; margin-left: 4px;" title="Verified Admin">
     <path d="M12 2L14.34 3.73L17.25 3.5L18.77 6.04L21.5 7.15L21.57 10.12L23.75 12.12L22.12 14.75L22.5 17.75L19.75 19L18.38 21.62L15.5 21.37L13.38 23.25L10.62 22.25L8.12 23.37L6.38 21.12L3.62 20.37L3.12 17.5L0.87 15.62L2.12 12.87L0.87 10.12L3.12 8.25L3.87 5.5L6.62 5.12L8.5 2.87L11.25 3.87L12 2Z" fill="#0ea5e9"/>
@@ -110,23 +108,6 @@ def load_admin_data():
                     if em and em != OWNER_EMAIL:
                         admins[em] = {"username": uname, "password": pwd}
     return admins
-
-def save_admin_data(email, username, password):
-    admins = load_admin_data()
-    admins[email] = {"username": username, "password": password}
-    with open(ADMIN_LIST_FILE, "w") as f:
-        for em, data in admins.items():
-            if em != OWNER_EMAIL:
-                f.write(f"{em}|||{data['username']}|||{data['password']}\n")
-
-def remove_admin_email(email):
-    admins = load_admin_data()
-    if email in admins and email != OWNER_EMAIL:
-        del admins[email]
-        with open(ADMIN_LIST_FILE, "w") as f:
-            for em, data in admins.items():
-                if em != OWNER_EMAIL:
-                    f.write(f"{em}|||{data['username']}|||{data['password']}\n")
 
 def load_users():
     users = {}
@@ -614,19 +595,7 @@ def admin_panel():
     msg = ""
     if request.method == "POST":
         action = request.form.get("action")
-        if action == "add_admin":
-            new_em = request.form.get("admin_email", "").strip()
-            new_uname = request.form.get("admin_username", "").strip()
-            new_pwd = request.form.get("admin_password", "").strip()
-            if new_em and new_uname and new_pwd:
-                save_admin_data(new_em, new_uname, new_pwd)
-                msg = f"✅ Admin '{new_uname}' added successfully!"
-        elif action == "remove_admin_email":
-            rem_em = request.form.get("remove_email", "").strip()
-            if rem_em:
-                remove_admin_email(rem_em)
-                msg = f"🗑️ Admin email '{rem_em}' removed successfully!"
-        elif action == "delete_license":
+        if action == "delete_license":
             lic_key = request.form.get("lic_key")
             licenses = load_licenses()
             if lic_key in licenses:
@@ -651,7 +620,7 @@ def admin_panel():
             }
             save_licenses(licenses)
             
-            # --- লাইসেন্স ক্রিয়েটের সাথে সাথেই জিমেইলে সব বিবরণসহ ইমেল পাঠানো ---
+            # --- লাইসেন্স ক্রিয়েট করার সাথে সাথেই জিমেইলে সব বিবরণ পাঠানো ---
             if l_email:
                 sub = f"Your ISS Security License & Subscription Details ({l_plan})"
                 html_body = f"""
@@ -681,10 +650,9 @@ def admin_panel():
                 """
                 send_automated_alert(l_email, sub, html_body)
 
-            msg = f"✅ License '{l_key}' created and full details sent to {l_email}!"
+            msg = f"✅ License '{l_key}' created and full credentials sent to {l_email}!"
 
     licenses = load_licenses()
-    admin_data = load_admin_data()
     inquiries = []
     if os.path.exists(INQUIRY_FILE):
         with open(INQUIRY_FILE, "r") as f:
@@ -719,40 +687,14 @@ def admin_panel():
         {% if msg %}<div style="background: rgba(16,185,129,0.1); border: 1px solid #10b981; color: #34d399; padding: 12px; border-radius: 8px; margin-bottom: 20px;">{{ msg }}</div>{% endif %}
 
         <div class="box">
-            <h3>👥 Add & Manage Admins</h3>
-            <form method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 15px;">
-                <input type="hidden" name="action" value="add_admin">
-                <input type="email" name="admin_email" placeholder="Email" required>
-                <input type="text" name="admin_username" placeholder="Username" required>
-                <input type="password" name="admin_password" placeholder="Password" required>
-                <button type="submit" style="grid-column: 1 / -1;">Add Admin</button>
-            </form>
-            
-            <h4 style="margin-top: 20px;">Authorized Admins:</h4>
-            <ul>
-                {% for em, data in admin_data.items() %}
-                <li style="margin-bottom:8px; font-size:13px;">{{ em }} ({{ data.username }}) 
-                {% if em != OWNER_EMAIL %}
-                <form method="POST" style="display:inline;">
-                    <input type="hidden" name="action" value="remove_admin_email">
-                    <input type="hidden" name="remove_email" value="{{ em }}">
-                    <button type="submit" style="background:#ef4444; padding:2px 6px; font-size:11px; width:auto;">Remove</button>
-                </form>
-                {% endif %}
-                </li>
-                {% endfor %}
-            </ul>
-        </div>
-
-        <div class="box">
             <h3>💬 Support Ticket Control Center</h3>
             <a href="/admin/tickets" style="display:inline-block; background:#0284c7; color:white; padding:10px 18px; text-decoration:none; border-radius:6px; font-weight:bold; font-size:13px;">Open All Support Tickets</a>
         </div>
 
-        <!-- 🔑 LICENSE MANAGEMENT WITH CLEAR EMAIL BOX -->
+        <!-- 🔑 LICENSE MANAGEMENT & EMAIL DISPATCHER -->
         <div class="box" style="border: 2px solid #0ea5e9;">
-            <h3 style="color: #38bdf8;">🔑 License Management & Automatic Email Dispatcher</h3>
-            <p style="font-size:13px; color:#94a3b8; margin-bottom:15px;">Fill out the form below. Entering the Client Email will instantly dispatch credentials, plan details, and portal links to the client's Gmail upon creation.</p>
+            <h3 style="color: #38bdf8;">🔑 License Management & Email Dispatcher</h3>
+            <p style="font-size:13px; color:#94a3b8; margin-bottom:15px;">Enter client email and details below to create a license. Credentials and portal links will be automatically emailed to the client.</p>
             
             <form method="POST" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin-bottom:20px;">
                 <input type="hidden" name="action" value="add_license">
@@ -821,7 +763,7 @@ def admin_panel():
         </div>
     </body>
     </html>
-    """, current_user=current_user, msg=msg, admin_data=admin_data, licenses=licenses, inquiries=inquiries)
+    """, current_user=current_user, msg=msg, licenses=licenses, inquiries=inquiries)
 
 @app.route("/admin/tickets", methods=["GET", "POST"])
 def admin_tickets():
@@ -947,7 +889,7 @@ def client_dashboard():
                     test_result = "Failed: Threat bypassed the antivirus defense!"
                 session[f"test_result_{lic_key}"] = test_result
                 
-                # --- ভাইরাস টেস্ট করার সাথে সাথেই জিমেইলে রিপোর্ট পাঠানো ---
+                # --- ভাইরাস টেস্টের পর তাৎক্ষণিক ইমেল পাঠানো ---
                 client_email = v.get('client_email')
                 if client_email and client_email != "client@iss.com":
                     sub = f"Security Scan & Threat Simulation Report - {lic_key}"
