@@ -606,7 +606,7 @@ def admin_panel():
             l_plan = request.form.get("l_plan", "Basic Plan")
             l_user = request.form.get("l_user", "admin")
             l_pwd = request.form.get("l_pwd", "admin")
-            l_email = request.form.get("l_email", "client@iss.com").strip()
+            l_email = request.form.get("l_email", "").strip()
 
             licenses = load_licenses()
             licenses[l_key] = {
@@ -616,7 +616,7 @@ def admin_panel():
             }
             save_licenses(licenses)
             
-            # --- আপনার ফরম্যাট অনুযায়ী অটোমেটিক ইমেল নোটিফিকেশন ---
+            # --- ক্লায়েন্টের ইমেলে আপনার নির্দিষ্ট ফরম্যাটে নোটিফিকেশন পাঠানো ---
             if l_email:
                 sub = "Welcome to ISS – Security Agent Setup"
                 html_body = f"""
@@ -633,7 +633,7 @@ def admin_panel():
                 """
                 send_automated_alert(l_email, sub, html_body)
 
-            msg = f"✅ License '{l_key}' created and notification email sent!"
+            msg = f"✅ License '{l_key}' created and email sent to {l_email}!"
 
     licenses = load_licenses()
     admin_data = load_admin_data()
@@ -702,13 +702,13 @@ def admin_panel():
         </div>
 
         <div class="box">
-            <h3>🔑 License Management</h3>
+            <h3>🔑 License Management (With Auto-Email)</h3>
             <form method="POST" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:15px;">
                 <input type="hidden" name="action" value="add_license">
                 <input type="text" name="l_key" placeholder="License Key" required>
                 <input type="text" name="l_name" placeholder="Client Name" required>
                 <input type="text" name="l_org" placeholder="Organization" required>
-                <input type="email" name="l_email" placeholder="Client Email (for Auto-Alert)" required>
+                <input type="email" name="l_email" placeholder="Client Email (Required for Mail)" required>
                 <select name="l_plan">
                     <option value="Basic Plan">Basic Plan</option>
                     <option value="Family Plan">Family Plan</option>
@@ -718,16 +718,16 @@ def admin_panel():
                 <input type="text" name="l_expiry" placeholder="Expiry (YYYY-MM-DD)" value="2027-01-01" required>
                 <input type="text" name="l_user" placeholder="Client User" value="admin" required>
                 <input type="text" name="l_pwd" placeholder="Client Pass" value="admin" required>
-                <button type="submit" style="grid-column: 1 / -1;">Create License & Send Email</button>
+                <button type="submit" style="grid-column: 1 / -1; background:#10b981;">Create License & Send Email Automatically</button>
             </form>
             <table>
-                <tr><th>Key</th><th>Client</th><th>Email</th><th>Org</th><th>Plan</th><th>Expiry</th><th>Action</th></tr>
+                <tr><th>Key</th><th>Client Name</th><th>Client Email</th><th>Org</th><th>Plan</th><th>Expiry</th><th>Action</th></tr>
                 {% if licenses %}
                     {% for k, v in licenses.items() %}
                     <tr>
                         <td><code>{{ k }}</code></td>
                         <td>{{ v.name }}</td>
-                        <td>{{ v.get('client_email', 'N/A') }}</td>
+                        <td style="color:#38bdf8;">{{ v.get('client_email', 'N/A') }}</td>
                         <td>{{ v.org }}</td>
                         <td>{{ v.plan }}</td>
                         <td>{{ v.expiry }}</td>
