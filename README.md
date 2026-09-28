@@ -3,7 +3,31 @@
 «Next-Generation Antivirus & Real-Time Threat Detection System
 Developed by ISS — International System Security»
 
-� � � � � �
+<div align="center"><img src="https://readme-typing-svg.demolab.com?font=Orbitron&size=24&pause=800&color=00FF9C&center=true&vCenter=true&width=800&lines=ISS-SENTINEL;NEXT-GENERATION+THREAT+DETECTION;REAL-TIME+SECURITY+MONITORING;INTERNATIONAL+SYSTEM+SECURITY" alt="ISS-Sentinel Animated Header"/><br><br>
+
+""ISS-Sentinel Security" (https://img.shields.io/badge/ISS--Sentinel-Security-00ff9c?style=for-the-badge&logo=shield&logoColor=white)" (https://iss-antivirus-cloud.onrender.com)
+""Status Online" (https://img.shields.io/badge/Status-Online-success?style=for-the-badge)" (https://iss-antivirus-cloud.onrender.com)
+""Python" (https://img.shields.io/badge/Python-3.x-blue?style=for-the-badge&logo=python&logoColor=white)" (https://github.com/muhibibrahim-6/ISS-Sentinel)
+""Flask Web API" (https://img.shields.io/badge/Flask-Web%20API-black?style=for-the-badge&logo=flask&logoColor=white)" (https://iss-antivirus-cloud.onrender.com)
+""Platform Cloud" (https://img.shields.io/badge/Platform-Cloud-orange?style=for-the-badge)" (https://iss-antivirus-cloud.onrender.com)
+""License MIT" (https://img.shields.io/badge/License-MIT-lightgrey?style=for-the-badge)" (https://github.com/muhibibrahim-6/ISS-Sentinel)
+
+<br><img src="https://img.shields.io/badge/●_SYSTEM-ONLINE-00FF9C?style=for-the-badge" />
+<img src="https://img.shields.io/badge/●_THREAT_ENGINE-ACTIVE-00FF9C?style=for-the-badge" />
+<img src="https://img.shields.io/badge/●_ISS_NETWORK-SECURE-00FF9C?style=for-the-badge" /></div>---
+
+<div align="center">╔══════════════════════════════════════════════════════╗
+║                                                      ║
+║          🛡️  I S S — S E N T I N E L               ║
+║                                                      ║
+║       NEXT-GENERATION SECURITY PLATFORM              ║
+║                                                      ║
+║        DETECT  •  ANALYZE  •  PROTECT               ║
+║                                                      ║
+╚══════════════════════════════════════════════════════╝
+
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=16&pause=700&color=00FF9C&center=true&vCenter=true&width=700&lines=%5B+SYSTEM+INITIALIZED+%5D;%5B+THREAT+ENGINE+READY+%5D;%5B+MONITORING+SECURITY+EVENTS+%5D;%5B+ISS+CYBERDEFENSE+ONLINE+%5D" alt="System Status"/></div>---
+
 🛡️ ISS — International System Security
 
 ISS-Sentinel is a cybersecurity project developed under the International System Security (ISS) ecosystem.
@@ -25,40 +49,37 @@ Its goal is to provide a lightweight security platform for experimenting with:
 
 ISS-Sentinel provides a web-based interface for security monitoring and threat-detection experimentation.
 
-The system is designed around a simple workflow:
+<div align="center">        ┌─────────────────────────────┐
+        │     SECURITY EVENT          │
+        └─────────────┬───────────────┘
+                      │
+                      ▼
+        ┌─────────────────────────────┐
+        │        SCANNING ENGINE      │
+        └─────────────┬───────────────┘
+                      │
+                      ▼
+        ┌─────────────────────────────┐
+        │       THREAT ANALYSIS       │
+        └─────────────┬───────────────┘
+                      │
+             ┌────────┴────────┐
+             ▼                 ▼
+        ┌─────────┐       ┌──────────┐
+        │  SAFE   │       │  THREAT  │
+        └────┬────┘       └────┬─────┘
+             │                 │
+             ▼                 ▼
+        ┌─────────┐       ┌──────────┐
+        │  ALLOW  │       │QUARANTINE│
+        └─────────┘       └────┬─────┘
+                               │
+                               ▼
+                        ┌────────────┐
+                        │ EVENT LOG  │
+                        └────────────┘
 
-                 ┌──────────────────┐
-                 │   Security Event │
-                 └────────┬─────────┘
-                          │
-                          ▼
-                 ┌──────────────────┐
-                 │     Scanner      │
-                 └────────┬─────────┘
-                          │
-                          ▼
-                 ┌──────────────────┐
-                 │ Threat Analysis  │
-                 └────────┬─────────┘
-                          │
-              ┌───────────┴───────────┐
-              │                       │
-            SAFE                    THREAT
-              │                       │
-              ▼                       ▼
-       ┌─────────────┐        ┌─────────────┐
-       │    Allow    │        │  Quarantine │
-       └─────────────┘        └──────┬──────┘
-                                     │
-                                     ▼
-                              ┌─────────────┐
-                              │ Event Log   │
-                              └─────────────┘
-
-🌐 Live Web App:
-https://iss-antivirus-cloud.onrender.com
-
----
+</div>---
 
 🚀 Key Features
 
@@ -94,36 +115,36 @@ ISS-Sentinel is designed as part of the broader ISS CyberDefense Suite, alongsid
 
 🖥️ Security Workflow
 
-┌─────────────────────────────────────────────┐
-│              ISS-SENTINEL                   │
-│         THREAT DETECTION PIPELINE           │
-├─────────────────────────────────────────────┤
-│                                             │
-│  INPUT                                      │
-│    │                                        │
-│    ▼                                        │
-│  FILE / SECURITY EVENT                      │
-│    │                                        │
-│    ▼                                        │
-│  SCANNING ENGINE                            │
-│    │                                        │
-│    ▼                                        │
-│  THREAT ANALYSIS                            │
-│    │                                        │
-│    ├───────────────┐                        │
-│    │               │                        │
-│    ▼               ▼                        │
-│  SAFE           SUSPICIOUS                  │
-│    │               │                        │
-│    ▼               ▼                        │
-│  ALLOW         QUARANTINE                  │
-│                    │                        │
-│                    ▼                        │
-│               EVENT LOG                     │
-│                                             │
-└─────────────────────────────────────────────┘
+<div align="center">╔══════════════════════════════════════════════╗
+║              ISS-SENTINEL                   ║
+║         THREAT DETECTION PIPELINE           ║
+╠══════════════════════════════════════════════╣
+║                                              ║
+║  INPUT                                       ║
+║    │                                         ║
+║    ▼                                         ║
+║  FILE / SECURITY EVENT                       ║
+║    │                                         ║
+║    ▼                                         ║
+║  SCANNING ENGINE                             ║
+║    │                                         ║
+║    ▼                                         ║
+║  THREAT ANALYSIS                             ║
+║    │                                         ║
+║    ├───────────────┐                         ║
+║    │               │                         ║
+║    ▼               ▼                         ║
+║  SAFE          SUSPICIOUS                    ║
+║    │               │                         ║
+║    ▼               ▼                         ║
+║  ALLOW         QUARANTINE                    ║
+║                    │                         ║
+║                    ▼                         ║
+║               EVENT LOG                      ║
+║                                              ║
+╚══════════════════════════════════════════════╝
 
----
+</div>---
 
 💻 Tech Stack
 
@@ -131,51 +152,9 @@ Component| Technology
 🐍 Backend| Python
 🌐 Web Framework| Flask
 🎨 Frontend| HTML5 / CSS3
-☁️ Hosting| Render
+☁️ Hosting| Render Cloud
 🔐 Security Logic| Python
 📊 Dashboard| Web UI
-
----
-
-⚙️ Local Installation
-
-1. Clone the Repository
-
-git clone https://github.com/muhibibrahim-6/ISS-Sentinel.git
-
-2. Enter the Project Directory
-
-cd ISS-Sentinel
-
-3. Create a Virtual Environment
-
-Linux / macOS
-
-python3 -m venv venv
-source venv/bin/activate
-
-Windows
-
-python -m venv venv
-venv\Scripts\activate
-
-4. Install Dependencies
-
-pip install -r requirements.txt
-
-5. Start the Application
-
-Depending on the project's Flask entry point:
-
-python app.py
-
-or:
-
-flask run
-
-The application should then be available locally at:
-
-http://127.0.0.1:5000
 
 ---
 
@@ -191,120 +170,107 @@ Do not use the project to:
 - ❌ Scan third-party systems without permission
 - ❌ Collect sensitive information without authorization
 
-Use dedicated test files, virtual machines, sandboxes, and controlled environments when experimenting with security detection.
-
 ---
 
 🧪 Development Roadmap
 
-ISS-SENTINEL ROADMAP
-────────────────────────────────────────
+<div align="center">╔══════════════════════════════════════════════╗
+║             ISS-SENTINEL ROADMAP            ║
+╠══════════════════════════════════════════════╣
+║                                              ║
+║  [✓] Initial web dashboard                  ║
+║  [✓] Basic security workflow                ║
+║  [✓] Threat simulation                      ║
+║  [✓] Activity logging                       ║
+║                                              ║
+║  [ ] Advanced file analysis                 ║
+║  [ ] Hash-based detection                   ║
+║  [ ] Improved quarantine management         ║
+║  [ ] Detection-rule engine                  ║
+║  [ ] Security event database                ║
+║  [ ] Authentication & authorization         ║
+║  [ ] API integration                        ║
+║  [ ] Improved monitoring                    ║
+║  [ ] Automated security reports             ║
+║                                              ║
+╚══════════════════════════════════════════════╝
 
-[✓] Initial web dashboard
-[✓] Basic security workflow
-[✓] Threat simulation
-[✓] Activity logging
-
-[ ] Advanced file analysis
-[ ] Hash-based detection
-[ ] Improved quarantine management
-[ ] Detection-rule engine
-[ ] Security event database
-[ ] Authentication & authorization
-[ ] API integration
-[ ] Improved monitoring
-[ ] Automated security reports
-
-────────────────────────────────────────
-             ISS — BUILDING
-
----
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=15&pause=900&color=00FF9C&center=true&vCenter=true&width=600&lines=BUILDING+THE+FUTURE+OF+ISS;SECURITY+ENGINE+EVOLVING...;NEXT+MODULE+LOADING...;ISS+CYBERDEFENSE+IN+PROGRESS..." alt="Roadmap Animation"/></div>---
 
 📊 Project Architecture
 
-                   ┌─────────────────────┐
-                   │     Web Client      │
-                   └──────────┬──────────┘
-                              │
-                              ▼
-                   ┌─────────────────────┐
-                   │    Flask Backend    │
-                   └──────────┬──────────┘
-                              │
-             ┌────────────────┼────────────────┐
-             │                │                │
-             ▼                ▼                ▼
-       ┌──────────┐     ┌───────────┐    ┌───────────┐
-       │ Scanner  │     │ Detection │    │   Logger  │
-       └────┬─────┘     └─────┬─────┘    └─────┬─────┘
-            │                  │                │
-            └──────────────────┼────────────────┘
+<div align="center">                    ┌─────────────────────┐
+                    │     WEB CLIENT      │
+                    └──────────┬──────────┘
+                               │
                                ▼
-                       ┌──────────────┐
-                       │  Quarantine  │
-                       └──────────────┘
+                    ┌─────────────────────┐
+                    │    FLASK BACKEND    │
+                    └──────────┬──────────┘
+                               │
+             ┌─────────────────┼─────────────────┐
+             │                 │                 │
+             ▼                 ▼                 ▼
+       ┌──────────┐      ┌───────────┐     ┌──────────┐
+       │ SCANNER  │      │ DETECTION │     │  LOGGER  │
+       └────┬─────┘      └─────┬─────┘     └────┬─────┘
+            │                   │                │
+            └───────────────────┼────────────────┘
+                                ▼
+                       ┌────────────────┐
+                       │   QUARANTINE   │
+                       └────────────────┘
 
----
+</div>---
 
 📂 Project Structure
 
 ISS-Sentinel/
 │
-├── app.py
+├── server.py
 ├── requirements.txt
 ├── README.md
 │
 ├── templates/
-│   └── index.html
+│   └── (HTML templates)
 │
-├── static/
-│   ├── css/
-│   ├── js/
-│   └── assets/
-│
-├── scanner/
-│   └── ...
-│
-├── quarantine/
-│   └── ...
-│
-└── logs/
-    └── ...
-
-«Adjust the structure above to match the actual repository layout.»
+└── static/
+    └── uploads/
 
 ---
 
 🌐 Live Deployment
 
-<div align="center">🟢 ISS-Sentinel Online
+<div align="center"><img src="https://img.shields.io/badge/●_ISS--SENTINEL-LIVE-00FF9C?style=for-the-badge" /><br><br>
 
-Live Web Application
+ISS-Sentinel is Live & Online
 
-https://iss-antivirus-cloud.onrender.com
+<br>"🚀 Access Live Web Application" (https://iss-antivirus-cloud.onrender.com)
 
-</div>---
+<br><br>
+
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=14&pause=800&color=00FF9C&center=true&vCenter=true&width=500&lines=CONNECTION+ESTABLISHED;ISS+SERVER+ONLINE;SECURITY+MONITORING+ACTIVE" alt="Live Status"/></div>---
 
 🛡️ ISS CyberDefense Suite
 
 ISS-Sentinel is intended to become one component of a broader ISS security ecosystem.
 
-                 ISS
-        INTERNATIONAL SYSTEM SECURITY
-                       │
-          ┌────────────┼────────────┐
-          │            │            │
-          ▼            ▼            ▼
-     SENTINEL        AEGIS       SECURITY
-     Antivirus      Firewall      TOOLS
-          │            │            │
-          └────────────┼────────────┘
-                       │
-                       ▼
-              ISS CYBERDEFENSE
-                    SUITE
+<div align="center">                         ISS
+              INTERNATIONAL SYSTEM SECURITY
+                            │
+              ┌─────────────┼─────────────┐
+              │             │             │
+              ▼             ▼             ▼
+         SENTINEL         AEGIS       SECURITY
+         ANTIVIRUS       FIREWALL       TOOLS
+              │             │             │
+              └─────────────┼─────────────┘
+                            │
+                            ▼
+                   ISS CYBERDEFENSE
+                         SUITE
 
----
+</div>---
 
 📜 License
 
@@ -316,13 +282,13 @@ See the "LICENSE" file for details.
 
 👨‍💻 Developer
 
-<div align="center">Muhib Ibrahim
+<div align="center"><img src="https://readme-typing-svg.demolab.com?font=Orbitron&size=20&pause=1000&color=00FF9C&center=true&vCenter=true&width=500&lines=MUHIB+IBRAHIM;FOUNDER+%2F+DEVELOPER;INTERNATIONAL+SYSTEM+SECURITY" alt="Developer Animation"/>Muhib Ibrahim
 
 Founder / Developer — ISS
 
 🛡️ International System Security
 
-<a href="https://github.com/muhibibrahim-6">
+<br><a href="https://github.com/muhibibrahim-6">
 <img src="https://img.shields.io/badge/GitHub-Muhib%20Ibrahim-181717?style=for-the-badge&logo=github&logoColor=white">
 </a></div>---
 
@@ -335,8 +301,10 @@ Founder / Developer — ISS
 ║                                              ║
 ╚══════════════════════════════════════════════╝
 
-🛡️ ISS-Sentinel
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=16&pause=700&color=00FF9C&center=true&vCenter=true&width=650&lines=DETECT.;ANALYZE.;PROTECT.;RESPOND.;ISS-SENTINEL+IS+EVOLVING...;THE+MISSION+CONTINUES...+%F0%9F%9B%A1%EF%B8%8F" alt="ISS Final Animation"/><br><br>
 
-Built for security research. Built for learning. Built for ISS.
+ISS-Sentinel
+
+"Built for security research • Built for learning • Built for ISS"
 
 </div>
