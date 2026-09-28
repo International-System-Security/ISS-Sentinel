@@ -278,7 +278,6 @@ def home():
             input, textarea { width: 100%; padding: 12px; margin: 8px 0 14px 0; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; color: white; box-sizing: border-box; }
             button { background: var(--accent-blue); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
             button:hover { background: var(--accent-hover); }
-            .avatar { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-blue); }
         </style>
     </head>
     <body>
@@ -309,7 +308,6 @@ def home():
 
             <div class="card" id="plans">
                 <h3>📦 Membership & Device Plans</h3>
-                <p style="font-size: 13px; color: var(--text-muted);">Choose the right security tier for your devices and business needs:</p>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-top: 15px;">
                     <div style="background:var(--bg-secondary); padding:15px; border-radius:8px; border:1px solid var(--border-color);">
                         <h4 style="margin:0 0 5px 0; color:#38bdf8;">Basic Plan</h4>
@@ -443,27 +441,6 @@ def my_profile():
                 return redirect(url_for("admin_panel") if users[uname]["role"] == "Admin" else url_for("my_profile"))
             else:
                 error = "Invalid email, username or password!"
-
-        elif action == "update_pic" and "username" in session:
-            curr_user = session["username"]
-            if curr_user in users:
-                if 'profile_pic_file' in request.files:
-                    file = request.files['profile_pic_file']
-                    if file and file.filename != '':
-                        filename = secure_filename(f"{curr_user}_{int(datetime.now().timestamp())}_{file.filename}")
-                        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                        users[curr_user]["pic"] = f"/static/uploads/{filename}"
-                        save_all_users(users)
-                        msg = "✅ Profile picture uploaded successfully!"
-
-        elif action == "toggle_trusted" and "username" in session:
-            current_user = session["username"]
-            if users.get(current_user, {}).get("role") == "Admin":
-                target_user = request.form.get("target_user")
-                if target_user in users:
-                    users[target_user]["trusted"] = not users[target_user].get("trusted", False)
-                    save_all_users(users)
-                    msg = f"✅ Trusted Black Badge status updated for '{target_user}'!"
 
     current_user = session.get("username")
     users = load_users() 
@@ -828,12 +805,11 @@ def client_dashboard():
             antivirus_active = True
         elif action == "run_test_virus":
             if antivirus_active:
-                # Simulated custom test virus execution check
-                is_success = random.choice([True, True, False]) # 66% chance success, 33% defeat
+                is_success = random.choice([True, True, False])
                 if is_success:
-                    test_result = "সফল (Success: Antivirus successfully neutralized the simulated threat!)"
+                    test_result = "Success: Antivirus successfully neutralized the simulated threat!"
                 else:
-                    test_result = "পরাজয় (Failed: Threat bypassed the antivirus defense!)"
+                    test_result = "Failed: Threat bypassed the antivirus defense!"
                 session[f"test_result_{lic_key}"] = test_result
         else:
             user_msg = request.form.get("message")
@@ -868,23 +844,23 @@ def client_dashboard():
 
             <!-- Test Virus Simulation Section -->
             <div style="background:#0b1120; border:1px solid #1e293b; padding:15px; border-radius:8px; margin:20px 0; text-align:center;">
-                <h4 style="margin:0 0 8px 0; color:#38bdf8;">🧪 টেস্ট ভাইরাস (Test Virus Simulation)</h4>
+                <h4 style="margin:0 0 8px 0; color:#38bdf8;">🧪 Test Virus Simulation</h4>
                 {% if antivirus_active %}
                     <form method="POST">
                         <input type="hidden" name="action" value="run_test_virus">
                         <button type="submit" style="background:#8b5cf6; color:white; padding:10px 20px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
-                            টেস্ট (Run Virus Test)
+                            Test
                         </button>
                     </form>
                     {% if test_result %}
-                        <div style="margin-top: 15px; padding: 10px; border-radius: 6px; font-weight: bold; background: {% if 'সফল' in test_result %}rgba(16,185,129,0.2); color:#34d399; border:1px solid #10b981{% else %}rgba(239,68,68,0.2); color:#fca5a5; border:1px solid #ef4444{% endif %};">
+                        <div style="margin-top: 15px; padding: 10px; border-radius: 6px; font-weight: bold; background: {% if 'Success' in test_result %}rgba(16,185,129,0.2); color:#34d399; border:1px solid #10b981{% else %}rgba(239,68,68,0.2); color:#fca5a5; border:1px solid #ef4444{% endif %};">
                             {{ test_result }}
                         </div>
                     {% endif %}
                 {% else %}
-                    <p style="font-size:12px; color:#fca5a5;">অ্যান্টিভাইরাস অ্যাক্টিভেট করার পর টেস্ট বাটনটি আনলক হবে।</p>
+                    <p style="font-size:12px; color:#fca5a5;">The Test button will unlock after activating the antivirus.</p>
                     <button disabled style="background:#334155; color:#94a3b8; padding:10px 20px; border:none; border-radius:6px; cursor:not-allowed;">
-                        টেস্ট (Locked)
+                        Test (Locked)
                     </button>
                 {% endif %}
             </div>
