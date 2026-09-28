@@ -7,7 +7,7 @@ import threading
 import time
 
 app = Flask(__name__)
-app.secret_key = "iss_security_secret_key_v102"
+app.secret_key = "iss_security_secret_key_v101"
 
 LICENSE_FILE = "licenses.txt"
 OWNER_USERNAME = "ibr@him"
@@ -332,6 +332,7 @@ def client_dashboard():
 
     v = licenses[lic_key]
     msg_status = ""
+    antivirus_active = session.get(f"av_active_{lic_key}", False)
 
     if request.method == "POST":
         action = request.form.get("action")
@@ -357,19 +358,21 @@ def client_dashboard():
                 """
                 send_automated_alert(new_email, sub, body)
 
+        elif action == "activate_antivirus":
+            session[f"av_active_{lic_key}"] = True
+            antivirus_active = True
+
     return render_template_string("""
     <!DOCTYPE html>
     <html lang="en">
     <head>
         <title>Client Dashboard</title>
         <style>
-            /* Popup Modal CSS */
             .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; }
             .modal-content { background: #111827; padding: 30px; border-radius: 12px; width: 380px; text-align: center; border: 2px solid #ef4444; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
             .modal-content h3 { color: #fca5a5; margin-top: 0; }
             .close-btn { background: #ef4444; color: white; border: none; padding: 10px 20px; margin-top: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
             
-            /* Scanner Steps CSS */
             .step-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #1e293b; font-size: 14px; color: #94a3b8; }
             .status { font-weight: bold; }
             .pending { color: #f59e0b; }
@@ -384,28 +387,47 @@ def client_dashboard():
             
             {% if msg_status %}<div style="background:rgba(16,185,129,0.1); border:1px solid #10b981; color:#34d399; padding:12px; border-radius:8px; margin-bottom:20px;">{{ msg_status }}</div>{% endif %}
 
-            <!-- ADD EMAIL FOR UNLOCK FEATURES -->
+            <!-- CLIENT EMAIL OPTION -->
             <div style="background:#0b1120; border:2px solid #f59e0b; padding:22px; border-radius:10px; margin:20px 0;">
                 <h3 style="margin:0 0 8px 0; color:#f59e0b;">📧 Add Email for Unlock More Features</h3>
                 <p style="font-size:13px; color:#94a3b8; margin:0 0 15px 0;">Enter your email to activate weekly automated security audit reports and instant virus threat alerts.</p>
                 <form method="POST">
                     <input type="hidden" name="action" value="save_client_email">
-                    <input type="email" name="client_email" placeholder="Enter your email address..." value="{% if v.client_email != 'client@iss.com' %}{{ v.client_email }}{% endif %}" required style="width:100%; padding:12px; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box; margin-bottom:12px;">
-                    <button type="submit" style="background:#f59e0b; color:#060913; padding:12px 20px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; width:100%;">Save Email & Unlock Features</button>
+                    <input type="email" name="client_email" placeholder="Enter your email address (e.g. client@gmail.com)" value="{% if v.client_email != 'client@iss.com' %}{{ v.client_email }}{% endif %}" required style="width:100%; padding:12px; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box; margin-bottom:12px; font-size:14px;">
+                    <button type="submit" style="background:#f59e0b; color:#060913; padding:12px 20px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; width:100%; font-size:14px;">Save Email & Unlock Advanced Features</button>
                 </form>
             </div>
 
-            <!-- MULTI-STEP ANTIVIRUS & THREAT SCANNER -->
+            <!-- PROTECTION STATUS -->
+            <div style="background:#0b1120; border:1px solid #1e293b; padding:20px; border-radius:8px; margin:20px 0; text-align:center;">
+                <h4 style="margin:0 0 8px 0; color:#38bdf8;">Protection Status</h4>
+                <p style="font-size:13px; color:#94a3b8; margin:0 0 15px 0;">
+                    {% if antivirus_active %}✅ Antivirus is Active & Protecting.{% else %}⚠️ Protection is Inactive.{% endif %}
+                </p>
+                <form method="POST">
+                    <input type="hidden" name="action" value="activate_antivirus">
+                    <button type="submit" style="background:#10b981; color:white; padding:10px 20px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
+                        {% if not antivirus_active %}Activate Protection{% else %}Re-Verify Protection{% endif %}
+                    </button>
+                </form>
+            </div>
+
+            <!-- MULTI-STEP SCANNER & TEST VIRUS SIMULATION -->
             <div style="background:#0b1120; border:1px solid #1e293b; padding:20px; border-radius:8px; margin:20px 0;">
                 <h4 style="margin:0 0 8px 0; color:#38bdf8;">🧪 Advanced Threat & Antivirus Scanner</h4>
-                <p style="font-size:12px; color:#94a3b8; margin:0 0 15px 0;">Run 6-layer comprehensive system security verification.</p>
-                <button onclick="startMultiStepScan()" style="background:#8b5cf6; color:white; padding:12px 20px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; width:100%;">
-                    Start Comprehensive Scan
-                </button>
+                <p style="font-size:12px; color:#94a3b8; margin:0 0 15px 0;">Run 6-layer comprehensive security verification and threat detection.</p>
                 
-                <div id="stepsContainer" style="margin-top:20px; display:none;">
-                    <!-- Steps injected dynamically -->
-                </div>
+                {% if antivirus_active %}
+                    <button onclick="startMultiStepScan()" style="background:#8b5cf6; color:white; padding:12px 20px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; width:100%;">
+                        Start Comprehensive Scan & Test Virus Simulation
+                    </button>
+                    
+                    <div id="stepsContainer" style="margin-top:20px; display:none;">
+                        <!-- Steps will be injected dynamically -->
+                    </div>
+                {% else %}
+                    <p style="font-size:12px; color:#fca5a5; text-align:center;">Activate protection first to run security scan.</p>
+                {% endif %}
             </div>
 
             <br><a href="/" style="color:#ef4444; font-size:13px; text-decoration:none; font-weight:bold;">Logout / Home</a>
@@ -450,13 +472,12 @@ def client_dashboard():
                     if (currentStep < scanSteps.length) {
                         const statusSpan = document.getElementById(`step-${currentStep}`);
                         
-                        // প্রতি ধাপে নির্দিষ্ট সময় পর আপডেট হবে (যেমন ২ সেকেন্ড বা আপনার চাহিদা অনুযায়ী)
                         setTimeout(() => {
-                            // উদাহরণের জন্য ধরে নিই ২য় ধাপে ভাইরাস বা থ্রেট ডিটেক্ট হতে পারে
+                            // উদাহরণের জন্য ২য় ধাপে থ্রেট ইনফেকশন বা রিয়েল/টেস্ট ভাইরাস শনাক্ত করা দেখানো হয়েছে
                             if (currentStep === 1) {
                                 statusSpan.className = "status failed";
                                 statusSpan.innerText = "❌ Infected";
-                                showPopup("Critical Virus Threat Detected!", "Warning: Real/Test virus signature identified in active system memory. Threat isolated successfully!");
+                                showPopup("Critical Virus Threat Detected!", "Warning: Real/Test virus signature identified in active system memory. Threat isolated and blocked successfully!");
                             } else {
                                 statusSpan.className = "status success";
                                 statusSpan.innerText = "✔ Success";
@@ -485,7 +506,7 @@ def client_dashboard():
         </script>
     </body>
     </html>
-    """, lic_key=lic_key, v=v, msg_status=msg_status)
+    """, lic_key=lic_key, v=v, antivirus_active=antivirus_active, msg_status=msg_status)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
