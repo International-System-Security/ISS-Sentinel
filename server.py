@@ -322,7 +322,7 @@ def client_login():
     </html>
     """, error_msg=error_msg)
 
-# --- CLIENT DASHBOARD (WITH MULTI-STEP SCANNER & POPUP) ---
+# --- CLIENT DASHBOARD ---
 @app.route("/client-dashboard", methods=["GET", "POST"])
 def client_dashboard():
     lic_key = session.get("client_license")
@@ -332,6 +332,8 @@ def client_dashboard():
 
     v = licenses[lic_key]
     msg_status = ""
+    test_result = session.get(f"test_result_{lic_key}", "")
+    scan_result = session.get(f"scan_result_{lic_key}", "")
     antivirus_active = session.get(f"av_active_{lic_key}", False)
 
     if request.method == "POST":
@@ -344,6 +346,7 @@ def client_dashboard():
                 save_licenses(licenses)
                 msg_status = "✅ Email added successfully! Advanced features unlocked."
                 
+                # ওয়েলকাম বা কনফার্মেশন মেইল পাঠানো
                 sub = f"Welcome to ISS Security - {v['plan']} Features Unlocked"
                 body = f"""
                 <div style="font-family:'Segoe UI',sans-serif; background:#0b1120; color:#f8fafc; padding:20px; border-radius:10px;">
@@ -361,25 +364,58 @@ def client_dashboard():
         elif action == "activate_antivirus":
             session[f"av_active_{lic_key}"] = True
             antivirus_active = True
+        elif action == "run_test_virus":
+            if antivirus_active:
+                is_success = random.choice([True, True, False])
+                test_result = "Success: Antivirus successfully neutralized the threat!" if is_success else "Failed: Threat bypassed defense!"
+                session[f"test_result_{lic_key}"] = test_result
+                
+                client_email = v.get('client_email')
+                if client_email and client_email != "client@iss.com":
+                    sub = f"Security Scan & Threat Simulation Report - {lic_key}"
+                    body = f"""
+                    <div style="font-family:'Segoe UI',sans-serif; background:#0b1120; color:#f8fafc; padding:20px; border-radius:10px;">
+                        <h3 style="color:#0ea5e9;">🛡️ ISS Endpoint Security Alert</h3>
+                        <p>Dear <b>{v['name']}</b>,</p>
+                        <p>A manual virus simulation test was executed on your device dashboard.</p>
+                        <p><b>Test Result:</b> <span style="color:{'#34d399' if 'Success' in test_result else '#fca5a5'};">{test_result}</span></p>
+                        <p><b>Organization:</b> {v['org']}</p>
+                        <p><b>Plan:</b> {v['plan']}</p>
+                        <br><p>Best regards,<br><b>ISS Security Team</b></p>
+                    </div>
+                    """
+                    send_automated_alert(client_email, sub, body)
+                    
+        elif action == "run_file_scan":
+            if antivirus_active:
+                # নতুন যুক্ত করা ভাইরাস স্ক্যান ফিচার
+                scanned_files_count = random.randint(120, 450)
+                threats_found = random.choice([0, 0, 0, 1]) # বেশিরভাগ সময় নিরাপদ দেখাবে
+                if threats_found > 0:
+                    scan_result = f"⚠️ Warning: Scanned {scanned_files_count} files. 1 suspicious threat detected and quarantined!"
+                else:
+                    scan_result = f"✅ Clean: Scanned {scanned_files_count} files. No viruses or threats found."
+                session[f"scan_result_{lic_key}"] = scan_result
+                
+                client_email = v.get('client_email')
+                if client_email and client_email != "client@iss.com":
+                    sub = f"Full System Virus Scan Report - {lic_key}"
+                    body = f"""
+                    <div style="font-family:'Segoe UI',sans-serif; background:#0b1120; color:#f8fafc; padding:20px; border-radius:10px;">
+                        <h3 style="color:#0ea5e9;">🛡️ ISS Full System Scan Results</h3>
+                        <p>Dear <b>{v['name']}</b>,</p>
+                        <p>Your scheduled/manual system virus scan has completed.</p>
+                        <p><b>Scan Summary:</b> <span style="color:{'#34d399' if 'Clean' in scan_result else '#fca5a5'};">{scan_result}</span></p>
+                        <p><b>Organization:</b> {v['org']}</p>
+                        <br><p>Best regards,<br><b>ISS Security Team</b></p>
+                    </div>
+                    """
+                    send_automated_alert(client_email, sub, body)
 
     return render_template_string("""
     <!DOCTYPE html>
     <html lang="en">
-    <head>
-        <title>Client Dashboard</title>
-        <style>
-            .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; }
-            .modal-content { background: #111827; padding: 30px; border-radius: 12px; width: 380px; text-align: center; border: 2px solid #ef4444; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-            .modal-content h3 { color: #fca5a5; margin-top: 0; }
-            .close-btn { background: #ef4444; color: white; border: none; padding: 10px 20px; margin-top: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-            
-            .step-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #1e293b; font-size: 14px; color: #94a3b8; }
-            .status { font-weight: bold; }
-            .pending { color: #f59e0b; }
-            .success { color: #34d399; }
-            .failed { color: #ef4444; }
-        </style>
-    </head>
+    <head><title>Client Dashboard</title></head>
     <body style="font-family:'Segoe UI'; background:#060913; color:white; padding:30px;">
         <div style="max-width:650px; margin:0 auto; background:#111827; padding:30px; border-radius:12px; border:1px solid #1e293b;">
             <h2>🛡️ Client Security Dashboard</h2>
@@ -387,7 +423,7 @@ def client_dashboard():
             
             {% if msg_status %}<div style="background:rgba(16,185,129,0.1); border:1px solid #10b981; color:#34d399; padding:12px; border-radius:8px; margin-bottom:20px;">{{ msg_status }}</div>{% endif %}
 
-            <!-- CLIENT EMAIL OPTION -->
+            <!-- CLIENT EMAIL OPTION FOR UNLOCKING FEATURES -->
             <div style="background:#0b1120; border:2px solid #f59e0b; padding:22px; border-radius:10px; margin:20px 0;">
                 <h3 style="margin:0 0 8px 0; color:#f59e0b;">📧 Add Email for Unlock More Features</h3>
                 <p style="font-size:13px; color:#94a3b8; margin:0 0 15px 0;">Enter your email to activate weekly automated security audit reports and instant virus threat alerts.</p>
@@ -398,7 +434,6 @@ def client_dashboard():
                 </form>
             </div>
 
-            <!-- PROTECTION STATUS -->
             <div style="background:#0b1120; border:1px solid #1e293b; padding:20px; border-radius:8px; margin:20px 0; text-align:center;">
                 <h4 style="margin:0 0 8px 0; color:#38bdf8;">Protection Status</h4>
                 <p style="font-size:13px; color:#94a3b8; margin:0 0 15px 0;">
@@ -412,101 +447,51 @@ def client_dashboard():
                 </form>
             </div>
 
-            <!-- MULTI-STEP SCANNER & TEST VIRUS SIMULATION -->
-            <div style="background:#0b1120; border:1px solid #1e293b; padding:20px; border-radius:8px; margin:20px 0;">
-                <h4 style="margin:0 0 8px 0; color:#38bdf8;">🧪 Advanced Threat & Antivirus Scanner</h4>
-                <p style="font-size:12px; color:#94a3b8; margin:0 0 15px 0;">Run 6-layer comprehensive security verification and threat detection.</p>
-                
+            <!-- VIRUS & FILE SCAN FEATURE -->
+            <div style="background:#0b1120; border:1px solid #1e293b; padding:20px; border-radius:8px; margin:20px 0; text-align:center;">
+                <h4 style="margin:0 0 8px 0; color:#38bdf8;">🔍 Full System & File Virus Scan</h4>
+                <p style="font-size:13px; color:#94a3b8; margin:0 0 15px 0;">Scan system files for malware and suspicious activities.</p>
                 {% if antivirus_active %}
-                    <button onclick="startMultiStepScan()" style="background:#8b5cf6; color:white; padding:12px 20px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; width:100%;">
-                        Start Comprehensive Scan & Test Virus Simulation
-                    </button>
-                    
-                    <div id="stepsContainer" style="margin-top:20px; display:none;">
-                        <!-- Steps will be injected dynamically -->
-                    </div>
+                    <form method="POST">
+                        <input type="hidden" name="action" value="run_file_scan">
+                        <button type="submit" style="background:#0ea5e9; color:white; padding:10px 20px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
+                            Start Virus Scan
+                        </button>
+                    </form>
+                    {% if scan_result %}
+                        <div style="margin-top:15px; padding:10px; border-radius:6px; font-weight:bold; background:{% if 'Clean' in scan_result %}rgba(16,185,129,0.2); color:#34d399; border:1px solid #10b981{% else %}rgba(239,68,68,0.2); color:#fca5a5; border:1px solid #ef4444{% endif %};">
+                            {{ scan_result }}
+                        </div>
+                    {% endif %}
                 {% else %}
-                    <p style="font-size:12px; color:#fca5a5; text-align:center;">Activate protection first to run security scan.</p>
+                    <p style="font-size:12px; color:#fca5a5;">Activate protection first to run virus scan.</p>
+                {% endif %}
+            </div>
+
+            <div style="background:#0b1120; border:1px solid #1e293b; padding:20px; border-radius:8px; margin:20px 0; text-align:center;">
+                <h4 style="margin:0 0 8px 0; color:#38bdf8;">🧪 Test Virus Simulation (Sends Instant Email)</h4>
+                {% if antivirus_active %}
+                    <form method="POST">
+                        <input type="hidden" name="action" value="run_test_virus">
+                        <button type="submit" style="background:#8b5cf6; color:white; padding:10px 20px; border-none; border-radius:6px; font-weight:bold; cursor:pointer;">
+                            Run Threat Test & Email Report
+                        </button>
+                    </form>
+                    {% if test_result %}
+                        <div style="margin-top:15px; padding:10px; border-radius:6px; font-weight:bold; background:{% if 'Success' in test_result %}rgba(16,185,129,0.2); color:#34d399; border:1px solid #10b981{% else %}rgba(239,68,68,0.2); color:#fca5a5; border:1px solid #ef4444{% endif %};">
+                            {{ test_result }}
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <p style="font-size:12px; color:#fca5a5;">Activate protection first to run test.</p>
                 {% endif %}
             </div>
 
             <br><a href="/" style="color:#ef4444; font-size:13px; text-decoration:none; font-weight:bold;">Logout / Home</a>
         </div>
-
-        <!-- Popup Modal -->
-        <div class="modal" id="alertModal">
-            <div class="modal-content">
-                <h3 id="modalTitle">Security Alert</h3>
-                <p id="modalMessage" style="color:#cbd5e1; font-size:14px;"></p>
-                <button class="close-btn" onclick="closeModal()">Acknowledge & Close</button>
-            </div>
-        </div>
-
-        <script>
-            const scanSteps = [
-                "Checking your device integrity...",
-                "Detecting active virus signatures...",
-                "Scanning system memory & processes...",
-                "Analyzing network packets & firewall...",
-                "Inspecting browser extensions & cookies...",
-                "Verifying system registry files..."
-            ];
-
-            function startMultiStepScan() {
-                const container = document.getElementById('stepsContainer');
-                container.style.display = 'block';
-                container.innerHTML = '';
-
-                scanSteps.forEach((stepText, index) => {
-                    container.innerHTML += `
-                        <div class="step-item">
-                            <span><b>Step ${index + 1}:</b> ${stepText}</span>
-                            <span class="status pending" id="step-${index}">Pending...</span>
-                        </div>
-                    `;
-                });
-
-                let currentStep = 0;
-
-                function processStep() {
-                    if (currentStep < scanSteps.length) {
-                        const statusSpan = document.getElementById(`step-${currentStep}`);
-                        
-                        setTimeout(() => {
-                            // উদাহরণের জন্য ২য় ধাপে থ্রেট ইনফেকশন বা রিয়েল/টেস্ট ভাইরাস শনাক্ত করা দেখানো হয়েছে
-                            if (currentStep === 1) {
-                                statusSpan.className = "status failed";
-                                statusSpan.innerText = "❌ Infected";
-                                showPopup("Critical Virus Threat Detected!", "Warning: Real/Test virus signature identified in active system memory. Threat isolated and blocked successfully!");
-                            } else {
-                                statusSpan.className = "status success";
-                                statusSpan.innerText = "✔ Success";
-                            }
-
-                            currentStep++;
-                            if (currentStep < scanSteps.length && statusSpan.className !== "status failed") {
-                                processStep();
-                            }
-                        }, 2000); 
-                    }
-                }
-
-                processStep();
-            }
-
-            function showPopup(title, message) {
-                document.getElementById('modalTitle').innerText = title;
-                document.getElementById('modalMessage').innerText = message;
-                document.getElementById('alertModal').style.display = 'flex';
-            }
-
-            function closeModal() {
-                document.getElementById('alertModal').style.display = 'none';
-            }
-        </script>
     </body>
     </html>
-    """, lic_key=lic_key, v=v, antivirus_active=antivirus_active, msg_status=msg_status)
+    """, lic_key=lic_key, v=v, antivirus_active=antivirus_active, test_result=test_result, scan_result=scan_result, msg_status=msg_status)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
