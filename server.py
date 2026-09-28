@@ -616,7 +616,7 @@ def admin_panel():
             }
             save_licenses(licenses)
             
-            # --- ক্লায়েন্টের ইমেলে আপনার নির্দিষ্ট ফরম্যাটে নোটিফিকেশন পাঠানো ---
+            # --- ক্লায়েন্টের জিমেইলে অটোমেটিক মেইল পাঠানো ---
             if l_email:
                 sub = "Welcome to ISS – Security Agent Setup"
                 html_body = f"""
