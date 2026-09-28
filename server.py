@@ -54,8 +54,7 @@ def send_automated_alert(recipient_email, subject, html_content):
 # --- BACKGROUND DAILY REPORT SENDER ---
 def background_daily_reporter():
     while True:
-        # প্রতি ২৪ ঘণ্টা পরপর (৮৬৪০০ সেকেন্ড) অটোমেটিক সব লাইসেন্সধারীকে প্রতিদিনের রিপোর্ট মেইল পাঠাবে
-        time.sleep(86400) 
+        time.sleep(86400) # প্রতি ২৪ ঘণ্টা পরপর অটোমেটিক মেইল পাঠাবে
         try:
             licenses = load_licenses()
             for lic_key, v in licenses.items():
@@ -77,7 +76,6 @@ def background_daily_reporter():
         except Exception as e:
             print(f"Background Reporter Error: {e}")
 
-# ব্যাকগ্রাউন্ডে প্রতিদিনের মেইল পাঠানোর প্রসেস রান করা
 threading.Thread(target=background_daily_reporter, daemon=True).start()
 
 # Exact Verified Blue Badge SVG for Admins
@@ -647,7 +645,7 @@ def admin_panel():
             }
             save_licenses(licenses)
             
-            # --- লাইসেন্স তৈরির সাথে সাথেই ক্লায়েন্টের জিমেইলে আপনার নির্দিষ্ট ফরম্যাটে মেইল পাঠানো ---
+            # --- লাইসেন্স তৈরির সাথে সাথে ক্লায়েন্ট জিমেইলে ওয়েলকাম মেইল পাঠানো ---
             if l_email:
                 sub = "Welcome to ISS – Security Agent Setup"
                 html_body = f"""
@@ -664,7 +662,7 @@ def admin_panel():
                 """
                 send_automated_alert(l_email, sub, html_body)
 
-            msg = f"✅ License '{l_key}' created and setup email sent!"
+            msg = f"✅ License '{l_key}' created successfully and setup email sent to client!"
 
     licenses = load_licenses()
     admin_data = load_admin_data()
@@ -689,7 +687,7 @@ def admin_panel():
             table { width: 100%; border-collapse: collapse; margin-top: 10px; }
             th, td { border: 1px solid #1e293b; padding: 12px; text-align: left; font-size: 13px; }
             th { background: #1a2234; color: #38bdf8; }
-            input, select, button { padding: 10px; margin: 5px 0; background: #060913; border: 1px solid #334155; color: white; border-radius: 6px; box-sizing: border-box; }
+            input, select, button { padding: 10px; margin: 5px 0; background: #060913; border: 1px solid #334155; color: white; border-radius: 6px; box-sizing: border-box; width: 100%; }
             button { background: #0ea5e9; font-weight: bold; cursor: pointer; border: none; }
         </style>
     </head>
@@ -719,7 +717,7 @@ def admin_panel():
                 <form method="POST" style="display:inline;">
                     <input type="hidden" name="action" value="remove_admin_email">
                     <input type="hidden" name="remove_email" value="{{ em }}">
-                    <button type="submit" style="background:#ef4444; padding:2px 6px; font-size:11px;">Remove</button>
+                    <button type="submit" style="background:#ef4444; padding:2px 6px; font-size:11px; width:auto;">Remove</button>
                 </form>
                 {% endif %}
                 </li>
@@ -733,24 +731,49 @@ def admin_panel():
         </div>
 
         <div class="box">
-            <h3>🔑 License Management (With Auto-Email Setup)</h3>
-            <form method="POST" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:15px;">
+            <h3>🔑 License Management (With Client Email & Auto Mail)</h3>
+            <form method="POST" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-bottom:20px;">
                 <input type="hidden" name="action" value="add_license">
-                <input type="text" name="l_key" placeholder="License Key" required>
-                <input type="text" name="l_name" placeholder="Client Name" required>
-                <input type="text" name="l_org" placeholder="Organization" required>
-                <input type="email" name="l_email" placeholder="Client Email (For Auto Mail)" required>
-                <select name="l_plan">
-                    <option value="Basic Plan">Basic Plan</option>
-                    <option value="Family Plan">Family Plan</option>
-                    <option value="Standard Plan">Standard Plan</option>
-                    <option value="Business Plan">Business Plan</option>
-                </select>
-                <input type="text" name="l_expiry" placeholder="Expiry (YYYY-MM-DD)" value="2027-01-01" required>
-                <input type="text" name="l_user" placeholder="Client User" value="admin" required>
-                <input type="text" name="l_pwd" placeholder="Client Pass" value="admin" required>
-                <button type="submit" style="grid-column: 1 / -1; background:#10b981;">Create License & Email Credentials</button>
+                <div>
+                    <label style="font-size:11px; color:#94a3b8;">License Key</label>
+                    <input type="text" name="l_key" placeholder="e.g. ISS-9999" required>
+                </div>
+                <div>
+                    <label style="font-size:11px; color:#94a3b8;">Client Name</label>
+                    <input type="text" name="l_name" placeholder="Client Full Name" required>
+                </div>
+                <div>
+                    <label style="font-size:11px; color:#94a3b8;">Organization</label>
+                    <input type="text" name="l_org" placeholder="Company / Org" required>
+                </div>
+                <div>
+                    <label style="font-size:11px; color:#94a3b8; color:#38bdf8; font-weight:bold;">Client Email (For Auto Mail)</label>
+                    <input type="email" name="l_email" placeholder="client@gmail.com" required style="border: 1px solid #38bdf8;">
+                </div>
+                <div>
+                    <label style="font-size:11px; color:#94a3b8;">Select Plan</label>
+                    <select name="l_plan">
+                        <option value="Basic Plan">Basic Plan</option>
+                        <option value="Family Plan">Family Plan</option>
+                        <option value="Standard Plan">Standard Plan</option>
+                        <option value="Business Plan">Business Plan</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:11px; color:#94a3b8;">Expiry Date</label>
+                    <input type="text" name="l_expiry" value="2027-01-01" required>
+                </div>
+                <div>
+                    <label style="font-size:11px; color:#94a3b8;">Portal Username</label>
+                    <input type="text" name="l_user" value="admin" required>
+                </div>
+                <div>
+                    <label style="font-size:11px; color:#94a3b8;">Portal Password</label>
+                    <input type="text" name="l_pwd" value="admin" required>
+                </div>
+                <button type="submit" style="grid-column: 1 / -1; background:#10b981; padding:12px; margin-top:5px;">Create License & Send Setup Email Automatically</button>
             </form>
+            
             <table>
                 <tr><th>Key</th><th>Client Name</th><th>Client Email</th><th>Org</th><th>Plan</th><th>Expiry</th><th>Action</th></tr>
                 {% if licenses %}
@@ -758,7 +781,7 @@ def admin_panel():
                     <tr>
                         <td><code>{{ k }}</code></td>
                         <td>{{ v.name }}</td>
-                        <td style="color:#38bdf8;">{{ v.get('client_email', 'N/A') }}</td>
+                        <td style="color:#38bdf8; font-weight:bold;">{{ v.get('client_email', 'N/A') }}</td>
                         <td>{{ v.org }}</td>
                         <td>{{ v.plan }}</td>
                         <td>{{ v.expiry }}</td>
@@ -766,7 +789,7 @@ def admin_panel():
                             <form method="POST" style="margin:0;">
                                 <input type="hidden" name="action" value="delete_license">
                                 <input type="hidden" name="lic_key" value="{{ k }}">
-                                <button type="submit" style="background:#ef4444; padding:4px 8px; font-size:11px;">Delete</button>
+                                <button type="submit" style="background:#ef4444; padding:4px 8px; font-size:11px; width:auto;">Delete</button>
                             </form>
                         </td>
                     </tr>
@@ -926,7 +949,7 @@ def client_dashboard():
                 </p>
                 <form method="POST">
                     <input type="hidden" name="action" value="activate_antivirus">
-                    <button type="submit" style="background:#10b981; color:white; padding:10px 20px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
+                    <button type="submit" style="background:#10b981; color:white; padding:10px 20px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; width:auto;">
                         {% if not antivirus_active %}Activate Antivirus{% else %}Re-Verify Antivirus{% endif %}
                     </button>
                 </form>
@@ -938,7 +961,7 @@ def client_dashboard():
                 {% if antivirus_active %}
                     <form method="POST">
                         <input type="hidden" name="action" value="run_test_virus">
-                        <button type="submit" style="background:#8b5cf6; color:white; padding:10px 20px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
+                        <button type="submit" style="background:#8b5cf6; color:white; padding:10px 20px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; width:auto;">
                             Test
                         </button>
                     </form>
@@ -949,7 +972,7 @@ def client_dashboard():
                     {% endif %}
                 {% else %}
                     <p style="font-size:12px; color:#fca5a5;">The Test button will unlock after activating the antivirus.</p>
-                    <button disabled style="background:#334155; color:#94a3b8; padding:10px 20px; border:none; border-radius:6px; cursor:not-allowed;">
+                    <button disabled style="background:#334155; color:#94a3b8; padding:10px 20px; border:none; border-radius:6px; cursor:not-allowed; width:auto;">
                         Test (Locked)
                     </button>
                 {% endif %}
@@ -968,8 +991,8 @@ def client_dashboard():
             </div>
             
             <form method="POST">
-                <input type="text" name="message" placeholder="Type message..." required style="width:78%; padding:10px; background:#060913; border:1px solid #334155; color:white; border-radius:6px;">
-                <button type="submit" style="width:20%; padding:10px; background:#0ea5e9; border:none; font-weight:bold; color:white; border-radius:6px; cursor:pointer;">Send</button>
+                <input type="text" name="message" placeholder="Type message..." required style="width:78%; padding:10px; background:#060913; border:1px solid #334155; color:white; border-radius:6px; display:inline-block;">
+                <button type="submit" style="width:20%; padding:10px; background:#0ea5e9; border:none; font-weight:bold; color:white; border-radius:6px; cursor:pointer; display:inline-block;">Send</button>
             </form>
             <br><a href="/" style="color:#ef4444; font-size:13px; text-decoration:none;">Logout / Home</a>
         </div>
@@ -1009,8 +1032,8 @@ def ticket_chat():
                 {% endif %}
             </div>
             <form method="POST">
-                <input type="text" name="message" placeholder="Type message..." required style="width:78%; padding:10px; background:#060913; border:1px solid #334155; color:white; border-radius:6px;">
-                <button type="submit" style="width:20%; padding:10px; background:#0ea5e9; border:none; font-weight:bold; color:white; border-radius:6px; cursor:pointer;">Send</button>
+                <input type="text" name="message" placeholder="Type message..." required style="width:78%; padding:10px; background:#060913; border:1px solid #334155; color:white; border-radius:6px; display:inline-block;">
+                <button type="submit" style="width:20%; padding:10px; background:#0ea5e9; border:none; font-weight:bold; color:white; border-radius:6px; cursor:pointer; display:inline-block;">Send</button>
             </form>
         </div>
     </body>
