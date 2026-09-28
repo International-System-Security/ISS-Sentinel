@@ -51,32 +51,38 @@ def send_automated_alert(recipient_email, subject, html_content):
         print(f"Error sending email: {e}")
         return False
 
-# --- BACKGROUND DAILY REPORT SENDER ---
-def background_daily_reporter():
+# --- BACKGROUND WEEKLY REPORT SENDER ---
+def background_weekly_reporter():
     while True:
-        time.sleep(86400) # প্রতি ২৪ ঘণ্টা পরপর অটোমেটিক মেইল পাঠাবে
+        # প্রতি ৭ দিন পরপর (৬০৪৮০০ সেকেন্ড) অটোমেটিক উইকলি রিপোর্ট মেইল পাঠাবে
+        time.sleep(604800) 
         try:
             licenses = load_licenses()
             for lic_key, v in licenses.items():
                 client_email = v.get('client_email')
                 if client_email and client_email != "client@iss.com":
-                    sub = "Daily Security & Activity Report - ISS Platform"
+                    sub = "Weekly Security Audit Report - ISS Platform"
                     body = f"""
-                    <p>Dear {v['name']},</p>
-                    <p>Here is your daily automated security audit report from International System Security (ISS).</p>
-                    <ul>
-                        <li><b>Organization:</b> {v['org']}</li>
-                        <li><b>Plan:</b> {v['plan']}</li>
-                        <li><b>Status:</b> All endpoints secured and monitored. No active threats.</li>
-                    </ul>
-                    <p>Login to your portal: <a href="https://iss-antivirus-cloud.onrender.com/client-login">Client Portal</a></p>
-                    <br><p>Best regards,<br>ISS Security Team</p>
+                    <div style="font-family:'Segoe UI',sans-serif; background:#060913; color:#f8fafc; padding:20px; border-radius:10px;">
+                        <h2 style="color:#0ea5e9;">🛡️ ISS Weekly Security Audit Report</h2>
+                        <p>Dear <b>{v['name']}</b>,</p>
+                        <p>Here is your weekly automated security status report for organization: <b>{v['org']}</b>.</p>
+                        <hr style="border-color:#1e293b;">
+                        <ul>
+                            <li><b>Subscription Plan:</b> {v['plan']}</li>
+                            <li><b>License Key:</b> <code style="color:#38bdf8;">{lic_key}</code></li>
+                            <li><b>Expiry Date:</b> {v['expiry']}</li>
+                            <li><b>Endpoint Status:</b> All protected nodes are secure. No heuristic threats detected.</li>
+                        </ul>
+                        <p>Access your portal here: <a href="https://iss-antivirus-cloud.onrender.com/client-login" style="color:#38bdf8;">Client Portal Login</a></p>
+                        <br><p>Best regards,<br><b>ISS Enterprise Security Team</b></p>
+                    </div>
                     """
                     send_automated_alert(client_email, sub, body)
         except Exception as e:
-            print(f"Background Reporter Error: {e}")
+            print(f"Weekly Reporter Error: {e}")
 
-threading.Thread(target=background_daily_reporter, daemon=True).start()
+threading.Thread(target=background_weekly_reporter, daemon=True).start()
 
 # Exact Verified Blue Badge SVG for Admins
 ADMIN_BADGE_SVG = '''
@@ -645,24 +651,37 @@ def admin_panel():
             }
             save_licenses(licenses)
             
-            # --- লাইসেন্স তৈরির সাথে সাথে ক্লায়েন্ট জিমেইলে ওয়েলকাম মেইল পাঠানো ---
+            # --- লাইসেন্স ক্রিয়েটের সাথে সাথেই জিমেইলে সব বিবরণসহ ইমেল পাঠানো ---
             if l_email:
-                sub = "Welcome to ISS – Security Agent Setup"
+                sub = f"Your ISS Security License & Subscription Details ({l_plan})"
                 html_body = f"""
-                <p>Dear {l_name},</p>
-                <p>Thank you for choosing International System Security (ISS).</p>
-                <p><b>Plan:</b> {l_plan}</p>
-                <p><b>License Key:</b> {l_key}</p>
-                <p><b>Cloud Server:</b> <a href="https://iss-antivirus-cloud.onrender.com">https://iss-antivirus-cloud.onrender.com</a></p>
-                <br>
-                <p>Your dashboard link:<br>
-                <a href="https://iss-antivirus-cloud.onrender.com/client-login">https://iss-antivirus-cloud.onrender.com/client-login</a></p>
-                <br>
-                <p>Best regards,<br>ISS Security Team</p>
+                <div style="font-family:'Segoe UI',sans-serif; background:#0b1120; color:#f8fafc; padding:25px; border-radius:12px; border:1px solid #1e293b;">
+                    <h2 style="color:#0ea5e9; margin-top:0;">🛡️ Welcome to International System Security (ISS)</h2>
+                    <p>Dear <b>{l_name}</b>,</p>
+                    <p>Your security license has been successfully created and activated for organization: <b>{l_org}</b>.</p>
+                    
+                    <div style="background:#111827; padding:15px; border-radius:8px; border:1px solid #334155; margin:15px 0;">
+                        <h4 style="color:#38bdf8; margin:0 0 10px 0;">📋 Subscription & License Credentials</h4>
+                        <p style="margin:5px 0;"><b>Subscription Plan:</b> <span style="color:#34d399;">{l_plan}</span></p>
+                        <p style="margin:5px 0;"><b>License Key:</b> <code style="background:#060913; padding:3px 6px; color:#38bdf8; border-radius:4px;">{l_key}</code></p>
+                        <p style="margin:5px 0;"><b>Portal Username:</b> {l_user}</p>
+                        <p style="margin:5px 0;"><b>Portal Password:</b> {l_pwd}</p>
+                        <p style="margin:5px 0;"><b>Expiry Date:</b> {l_expiry}</p>
+                    </div>
+
+                    <div style="margin:20px 0;">
+                        <p><b>Client Portal Login Link:</b><br>
+                        <a href="https://iss-antivirus-cloud.onrender.com/client-login" style="background:#0ea5e9; color:white; padding:10px 18px; text-decoration:none; border-radius:6px; display:inline-block; font-weight:bold; margin-top:5px;">Access Client Portal</a></p>
+                    </div>
+
+                    <p style="color:#94a3b8; font-size:12px; margin-top:20px;">Note: You will receive weekly security audit reports automatically on this email address.</p>
+                    <hr style="border-color:#1e293b; margin:20px 0;">
+                    <p style="color:#94a3b8; font-size:12px;">Best regards,<br><b>ISS Enterprise Security Team</b></p>
+                </div>
                 """
                 send_automated_alert(l_email, sub, html_body)
 
-            msg = f"✅ License '{l_key}' created successfully and setup email sent to client!"
+            msg = f"✅ License '{l_key}' created and full details sent to {l_email}!"
 
     licenses = load_licenses()
     admin_data = load_admin_data()
@@ -730,48 +749,51 @@ def admin_panel():
             <a href="/admin/tickets" style="display:inline-block; background:#0284c7; color:white; padding:10px 18px; text-decoration:none; border-radius:6px; font-weight:bold; font-size:13px;">Open All Support Tickets</a>
         </div>
 
-        <div class="box">
-            <h3>🔑 License Management (With Client Email & Auto Mail)</h3>
-            <form method="POST" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-bottom:20px;">
+        <!-- 🔑 LICENSE MANAGEMENT WITH CLEAR EMAIL BOX -->
+        <div class="box" style="border: 2px solid #0ea5e9;">
+            <h3 style="color: #38bdf8;">🔑 License Management & Automatic Email Dispatcher</h3>
+            <p style="font-size:13px; color:#94a3b8; margin-bottom:15px;">Fill out the form below. Entering the Client Email will instantly dispatch credentials, plan details, and portal links to the client's Gmail upon creation.</p>
+            
+            <form method="POST" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin-bottom:20px;">
                 <input type="hidden" name="action" value="add_license">
                 <div>
-                    <label style="font-size:11px; color:#94a3b8;">License Key</label>
-                    <input type="text" name="l_key" placeholder="e.g. ISS-9999" required>
+                    <label style="font-size:12px; color:#38bdf8; font-weight:bold;">License Key *</label>
+                    <input type="text" name="l_key" placeholder="e.g. ISS-LICENSE-101" required>
                 </div>
                 <div>
-                    <label style="font-size:11px; color:#94a3b8;">Client Name</label>
+                    <label style="font-size:12px; color:#38bdf8; font-weight:bold;">Client Name *</label>
                     <input type="text" name="l_name" placeholder="Client Full Name" required>
                 </div>
                 <div>
-                    <label style="font-size:11px; color:#94a3b8;">Organization</label>
-                    <input type="text" name="l_org" placeholder="Company / Org" required>
+                    <label style="font-size:12px; color:#38bdf8; font-weight:bold;">Organization *</label>
+                    <input type="text" name="l_org" placeholder="Company / Organization" required>
                 </div>
                 <div>
-                    <label style="font-size:11px; color:#94a3b8; color:#38bdf8; font-weight:bold;">Client Email (For Auto Mail)</label>
-                    <input type="email" name="l_email" placeholder="client@gmail.com" required style="border: 1px solid #38bdf8;">
+                    <label style="font-size:12px; color:#f59e0b; font-weight:bold;">📧 Client Email (For Instant Credentials) *</label>
+                    <input type="email" name="l_email" placeholder="client@gmail.com" required style="border: 2px solid #f59e0b; background:#0b1120;">
                 </div>
                 <div>
-                    <label style="font-size:11px; color:#94a3b8;">Select Plan</label>
+                    <label style="font-size:12px; color:#38bdf8; font-weight:bold;">Subscription Plan *</label>
                     <select name="l_plan">
-                        <option value="Basic Plan">Basic Plan</option>
-                        <option value="Family Plan">Family Plan</option>
-                        <option value="Standard Plan">Standard Plan</option>
-                        <option value="Business Plan">Business Plan</option>
+                        <option value="Basic Plan">Basic Plan (2 Devices)</option>
+                        <option value="Family Plan">Family Plan (5 Devices)</option>
+                        <option value="Standard Plan">Standard Plan (10 Devices)</option>
+                        <option value="Business Plan">Business Plan (Unlimited)</option>
                     </select>
                 </div>
                 <div>
-                    <label style="font-size:11px; color:#94a3b8;">Expiry Date</label>
+                    <label style="font-size:12px; color:#38bdf8; font-weight:bold;">Expiry Date *</label>
                     <input type="text" name="l_expiry" value="2027-01-01" required>
                 </div>
                 <div>
-                    <label style="font-size:11px; color:#94a3b8;">Portal Username</label>
+                    <label style="font-size:12px; color:#38bdf8; font-weight:bold;">Portal Username *</label>
                     <input type="text" name="l_user" value="admin" required>
                 </div>
                 <div>
-                    <label style="font-size:11px; color:#94a3b8;">Portal Password</label>
+                    <label style="font-size:12px; color:#38bdf8; font-weight:bold;">Portal Password *</label>
                     <input type="text" name="l_pwd" value="admin" required>
                 </div>
-                <button type="submit" style="grid-column: 1 / -1; background:#10b981; padding:12px; margin-top:5px;">Create License & Send Setup Email Automatically</button>
+                <button type="submit" style="grid-column: 1 / -1; background:#10b981; padding:14px; font-size:15px; margin-top:5px;">🚀 Create License & Email All Details Automatically</button>
             </form>
             
             <table>
@@ -854,7 +876,7 @@ def admin_tickets():
     </html>
     """, tickets=tickets, selected_tid=selected_tid)
 
-# --- 3. CLIENT PANEL (CLEAN & SECURE) ---
+# --- 3. CLIENT PANEL ---
 @app.route("/client-login", methods=["GET", "POST"])
 def client_login():
     error_msg = ""
@@ -924,6 +946,24 @@ def client_dashboard():
                 else:
                     test_result = "Failed: Threat bypassed the antivirus defense!"
                 session[f"test_result_{lic_key}"] = test_result
+                
+                # --- ভাইরাস টেস্ট করার সাথে সাথেই জিমেইলে রিপোর্ট পাঠানো ---
+                client_email = v.get('client_email')
+                if client_email and client_email != "client@iss.com":
+                    sub = f"Security Scan & Threat Simulation Report - {lic_key}"
+                    body = f"""
+                    <div style="font-family:'Segoe UI',sans-serif; background:#0b1120; color:#f8fafc; padding:20px; border-radius:10px;">
+                        <h3 style="color:#0ea5e9;">🛡️ ISS Endpoint Security Alert</h3>
+                        <p>Dear <b>{v['name']}</b>,</p>
+                        <p>A manual virus simulation test was executed on your device dashboard.</p>
+                        <p><b>Test Result:</b> <span style="color:{'#34d399' if 'Success' in test_result else '#fca5a5'};">{test_result}</span></p>
+                        <p><b>Organization:</b> {v['org']}</p>
+                        <p><b>Plan:</b> {v['plan']}</p>
+                        <br><p>Best regards,<br><b>ISS Security Team</b></p>
+                    </div>
+                    """
+                    send_automated_alert(client_email, sub, body)
+
         else:
             user_msg = request.form.get("message")
             if user_msg:
@@ -957,12 +997,12 @@ def client_dashboard():
 
             <!-- Test Virus Simulation Section -->
             <div style="background:#0b1120; border:1px solid #1e293b; padding:15px; border-radius:8px; margin:20px 0; text-align:center;">
-                <h4 style="margin:0 0 8px 0; color:#38bdf8;">🧪 Test Virus Simulation</h4>
+                <h4 style="margin:0 0 8px 0; color:#38bdf8;">🧪 Test Virus Simulation (Triggers Instant Email)</h4>
                 {% if antivirus_active %}
                     <form method="POST">
                         <input type="hidden" name="action" value="run_test_virus">
                         <button type="submit" style="background:#8b5cf6; color:white; padding:10px 20px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; width:auto;">
-                            Test
+                            Run Threat Test & Email Report
                         </button>
                     </form>
                     {% if test_result %}
