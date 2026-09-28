@@ -3,30 +3,30 @@
 «Next-Generation Antivirus & Real-Time Threat Detection System
 Developed by ISS — International System Security»
 
-<div align="center"><img src="https://readme-typing-svg.demolab.com?font=Orbitron&size=24&pause=800&color=00FF9C&center=true&vCenter=true&width=800&lines=ISS-SENTINEL;NEXT-GENERATION+THREAT+DETECTION;REAL-TIME+SECURITY+MONITORING;INTERNATIONAL+SYSTEM+SECURITY" alt="ISS-Sentinel Animated Header"/><br><br>
+<div align="center"><img src="https://readme-typing-svg.demolab.com?font=Orbitron&size=25&pause=900&color=00FF9C&center=true&vCenter=true&width=800&lines=ISS-SENTINEL;NEXT-GENERATION+THREAT+DETECTION;REAL-TIME+SECURITY+MONITORING;INTERNATIONAL+SYSTEM+SECURITY" alt="ISS-Sentinel"/><br><br>
 
-""ISS-Sentinel Security" (https://img.shields.io/badge/ISS--Sentinel-Security-00ff9c?style=for-the-badge&logo=shield&logoColor=white)" (https://iss-antivirus-cloud.onrender.com)
-""Status Online" (https://img.shields.io/badge/Status-Online-success?style=for-the-badge)" (https://iss-antivirus-cloud.onrender.com)
-""Python" (https://img.shields.io/badge/Python-3.x-blue?style=for-the-badge&logo=python&logoColor=white)" (https://github.com/muhibibrahim-6/ISS-Sentinel)
-""Flask Web API" (https://img.shields.io/badge/Flask-Web%20API-black?style=for-the-badge&logo=flask&logoColor=white)" (https://iss-antivirus-cloud.onrender.com)
-""Platform Cloud" (https://img.shields.io/badge/Platform-Cloud-orange?style=for-the-badge)" (https://iss-antivirus-cloud.onrender.com)
-""License MIT" (https://img.shields.io/badge/License-MIT-lightgrey?style=for-the-badge)" (https://github.com/muhibibrahim-6/ISS-Sentinel)
+<img src="https://img.shields.io/badge/ISS--SENTINEL-SECURITY-00ff9c?style=for-the-badge&logo=shield&logoColor=white" alt="ISS Sentinel Security"/>
+<img src="https://img.shields.io/badge/STATUS-ONLINE-00c853?style=for-the-badge&logo=statuspage&logoColor=white" alt="Status Online"/>
+<img src="https://img.shields.io/badge/PYTHON-3.x-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>
+<img src="https://img.shields.io/badge/FLASK-WEB%20API-000000?style=for-the-badge&logo=flask&logoColor=white" alt="Flask Web API"/>
+<img src="https://img.shields.io/badge/PLATFORM-CLOUD-F97316?style=for-the-badge&logo=googlecloud&logoColor=white" alt="Cloud Platform"/>
+<img src="https://img.shields.io/badge/LICENSE-MIT-808080?style=for-the-badge&logo=opensourceinitiative&logoColor=white" alt="MIT License"/><br><br>
 
-<br><img src="https://img.shields.io/badge/●_SYSTEM-ONLINE-00FF9C?style=for-the-badge" />
-<img src="https://img.shields.io/badge/●_THREAT_ENGINE-ACTIVE-00FF9C?style=for-the-badge" />
-<img src="https://img.shields.io/badge/●_ISS_NETWORK-SECURE-00FF9C?style=for-the-badge" /></div>---
+<img src="https://img.shields.io/badge/●_ISS_CENTRAL-ONLINE-00FF9C?style=for-the-badge" alt="ISS Central Online"/>
+<img src="https://img.shields.io/badge/●_SECURITY_STATUS-ACTIVE-00FF9C?style=for-the-badge" alt="Security Status Active"/>
+<img src="https://img.shields.io/badge/●_THREAT_ENGINE-READY-00FF9C?style=for-the-badge" alt="Threat Engine Ready"/></div>---
 
-<div align="center">╔══════════════════════════════════════════════════════╗
-║                                                      ║
-║          🛡️  I S S — S E N T I N E L               ║
-║                                                      ║
-║       NEXT-GENERATION SECURITY PLATFORM              ║
-║                                                      ║
-║        DETECT  •  ANALYZE  •  PROTECT               ║
-║                                                      ║
-╚══════════════════════════════════════════════════════╝
+<div align="center">╔══════════════════════════════════════════════════╗
+║                                                  ║
+║             🛡️  I S S — S E N T I N E L         ║
+║                                                  ║
+║        NEXT-GENERATION SECURITY SYSTEM           ║
+║                                                  ║
+║         DETECT • ANALYZE • PROTECT               ║
+║                                                  ║
+╚══════════════════════════════════════════════════╝
 
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=16&pause=700&color=00FF9C&center=true&vCenter=true&width=700&lines=%5B+SYSTEM+INITIALIZED+%5D;%5B+THREAT+ENGINE+READY+%5D;%5B+MONITORING+SECURITY+EVENTS+%5D;%5B+ISS+CYBERDEFENSE+ONLINE+%5D" alt="System Status"/></div>---
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=15&pause=700&color=00FF9C&center=true&vCenter=true&width=700&lines=%5B+SYSTEM+INITIALIZED+%5D;%5B+THREAT+ENGINE+READY+%5D;%5B+SECURITY+MONITORING+ACTIVE+%5D;%5B+ISS+CYBERDEFENSE+ONLINE+%5D" alt="System Status"/></div>---
 
 🛡️ ISS — International System Security
 
@@ -41,7 +41,7 @@ Its goal is to provide a lightweight security platform for experimenting with:
 - 📊 Security activity logging
 - 🌐 Web-based security dashboards
 
-«⚠️ Project status: ISS-Sentinel is an evolving security project. Detection and protection capabilities should not be interpreted as equivalent to a commercial antivirus or endpoint detection and response (EDR) product unless independently validated.»
+«⚠️ Project Status: ISS-Sentinel is an evolving security project. Detection and protection capabilities should not be interpreted as equivalent to a commercial antivirus or EDR product unless independently validated.»
 
 ---
 
@@ -49,35 +49,36 @@ Its goal is to provide a lightweight security platform for experimenting with:
 
 ISS-Sentinel provides a web-based interface for security monitoring and threat-detection experimentation.
 
-<div align="center">        ┌─────────────────────────────┐
-        │     SECURITY EVENT          │
-        └─────────────┬───────────────┘
-                      │
-                      ▼
-        ┌─────────────────────────────┐
-        │        SCANNING ENGINE      │
-        └─────────────┬───────────────┘
-                      │
-                      ▼
-        ┌─────────────────────────────┐
-        │       THREAT ANALYSIS       │
-        └─────────────┬───────────────┘
-                      │
-             ┌────────┴────────┐
-             ▼                 ▼
-        ┌─────────┐       ┌──────────┐
-        │  SAFE   │       │  THREAT  │
-        └────┬────┘       └────┬─────┘
-             │                 │
-             ▼                 ▼
-        ┌─────────┐       ┌──────────┐
-        │  ALLOW  │       │QUARANTINE│
-        └─────────┘       └────┬─────┘
-                               │
-                               ▼
-                        ┌────────────┐
-                        │ EVENT LOG  │
-                        └────────────┘
+<div align="center">                 ┌─────────────────────┐
+                 │   SECURITY EVENT    │
+                 └──────────┬──────────┘
+                            │
+                            ▼
+                 ┌─────────────────────┐
+                 │   SCANNING ENGINE   │
+                 └──────────┬──────────┘
+                            │
+                            ▼
+                 ┌─────────────────────┐
+                 │   THREAT ANALYSIS   │
+                 └──────────┬──────────┘
+                            │
+                 ┌──────────┴──────────┐
+                 │                     │
+                 ▼                     ▼
+            ┌─────────┐           ┌─────────┐
+            │  SAFE   │           │ THREAT  │
+            └────┬────┘           └────┬────┘
+                 │                     │
+                 ▼                     ▼
+            ┌─────────┐           ┌────────────┐
+            │  ALLOW  │           │ QUARANTINE │
+            └─────────┘           └─────┬──────┘
+                                        │
+                                        ▼
+                                  ┌───────────┐
+                                  │ EVENT LOG │
+                                  └───────────┘
 
 </div>---
 
@@ -105,11 +106,11 @@ Security events can be recorded for monitoring, debugging, and investigation.
 
 🧪 Threat Simulation
 
-The project can be used to safely demonstrate security detection concepts without requiring real malware.
+The project can safely demonstrate security detection concepts without requiring real malware.
 
 🔗 ISS CyberDefense Integration
 
-ISS-Sentinel is designed as part of the broader ISS CyberDefense Suite, alongside security components such as Aegis Core Firewall.
+ISS-Sentinel is designed as part of the broader ISS CyberDefense Suite, alongside components such as Aegis Core Firewall.
 
 ---
 
@@ -195,7 +196,7 @@ Do not use the project to:
 ║                                              ║
 ╚══════════════════════════════════════════════╝
 
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=15&pause=900&color=00FF9C&center=true&vCenter=true&width=600&lines=BUILDING+THE+FUTURE+OF+ISS;SECURITY+ENGINE+EVOLVING...;NEXT+MODULE+LOADING...;ISS+CYBERDEFENSE+IN+PROGRESS..." alt="Roadmap Animation"/></div>---
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=15&pause=800&color=00FF9C&center=true&vCenter=true&width=650&lines=BUILDING+THE+FUTURE+OF+ISS;SECURITY+ENGINE+EVOLVING...;NEXT+MODULE+LOADING...;ISS+CYBERDEFENSE+IN+PROGRESS..." alt="Roadmap"/></div>---
 
 📊 Project Architecture
 
@@ -241,15 +242,15 @@ ISS-Sentinel/
 
 🌐 Live Deployment
 
-<div align="center"><img src="https://img.shields.io/badge/●_ISS--SENTINEL-LIVE-00FF9C?style=for-the-badge" /><br><br>
+<div align="center"><img src="https://img.shields.io/badge/●_ISS--SENTINEL-LIVE-00FF9C?style=for-the-badge" alt="ISS Sentinel Live"/><br><br>
 
-ISS-Sentinel is Live & Online
+🟢 ISS-Sentinel is Live & Online
 
-<br>"🚀 Access Live Web Application" (https://iss-antivirus-cloud.onrender.com)
+<a href="https://iss-antivirus-cloud.onrender.com">
+<img src="https://img.shields.io/badge/🚀_OPEN_LIVE_WEB_APP-ISS--SENTINEL-00ff9c?style=for-the-badge" alt="Open ISS Sentinel"/>
+</a><br><br>
 
-<br><br>
-
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=14&pause=800&color=00FF9C&center=true&vCenter=true&width=500&lines=CONNECTION+ESTABLISHED;ISS+SERVER+ONLINE;SECURITY+MONITORING+ACTIVE" alt="Live Status"/></div>---
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=14&pause=800&color=00FF9C&center=true&vCenter=true&width=550&lines=CONNECTION+ESTABLISHED;ISS+SERVER+ONLINE;SECURITY+MONITORING+ACTIVE" alt="Live Status"/></div>---
 
 🛡️ ISS CyberDefense Suite
 
@@ -282,14 +283,14 @@ See the "LICENSE" file for details.
 
 👨‍💻 Developer
 
-<div align="center"><img src="https://readme-typing-svg.demolab.com?font=Orbitron&size=20&pause=1000&color=00FF9C&center=true&vCenter=true&width=500&lines=MUHIB+IBRAHIM;FOUNDER+%2F+DEVELOPER;INTERNATIONAL+SYSTEM+SECURITY" alt="Developer Animation"/>Muhib Ibrahim
+<div align="center"><img src="https://readme-typing-svg.demolab.com?font=Orbitron&size=20&pause=1000&color=00FF9C&center=true&vCenter=true&width=550&lines=MUHIB+IBRAHIM;FOUNDER+%2F+DEVELOPER;INTERNATIONAL+SYSTEM+SECURITY" alt="Muhib Ibrahim"/>Muhib Ibrahim
 
 Founder / Developer — ISS
 
 🛡️ International System Security
 
 <br><a href="https://github.com/muhibibrahim-6">
-<img src="https://img.shields.io/badge/GitHub-Muhib%20Ibrahim-181717?style=for-the-badge&logo=github&logoColor=white">
+<img src="https://img.shields.io/badge/GitHub-Muhib%20Ibrahim-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"/>
 </a></div>---
 
 <div align="center">╔══════════════════════════════════════════════╗
@@ -301,7 +302,7 @@ Founder / Developer — ISS
 ║                                              ║
 ╚══════════════════════════════════════════════╝
 
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=16&pause=700&color=00FF9C&center=true&vCenter=true&width=650&lines=DETECT.;ANALYZE.;PROTECT.;RESPOND.;ISS-SENTINEL+IS+EVOLVING...;THE+MISSION+CONTINUES...+%F0%9F%9B%A1%EF%B8%8F" alt="ISS Final Animation"/><br><br>
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=16&pause=700&color=00FF9C&center=true&vCenter=true&width=700&lines=DETECT.;ANALYZE.;PROTECT.;RESPOND.;ISS-SENTINEL+IS+EVOLVING...;THE+MISSION+CONTINUES...+%F0%9F%9B%A1%EF%B8%8F" alt="Final Animation"/><br><br>
 
 ISS-Sentinel
 
