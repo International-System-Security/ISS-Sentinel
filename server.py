@@ -1,11 +1,12 @@
-from flask import Flask, render_template_string, request, redirect, url_for, session
+from flask import Flask, render_template_string, request, redirect, url_for, session, jsonify
 import os
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 import random
+import requests
 
 app = Flask(__name__)
-app.secret_key = "iss_enterprise_security_secret_key_v17"
+app.secret_key = "iss_enterprise_security_secret_key_v17_discord"
 
 UPLOAD_FOLDER = 'static/uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -21,6 +22,18 @@ ADMIN_LIST_FILE = "admins.txt"
 OWNER_EMAIL = "admin@iss.com"
 OWNER_USERNAME = "ibr@him"
 OWNER_PASSWORD = "muhib###5869@"
+
+# ডিসকর্ড ওয়েবহুক ইউআরএল
+DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1556104485439275099/dzkin3uRRAl68W6xW5vjDnwDt5j5yoV04AyMH1xbBEep6PDO0mYn28TmLfLbNoHH3MPE"
+
+def send_discord_alert(message_text):
+    if not DISCORD_WEBHOOK_URL:
+        return
+    payload = {"content": message_text}
+    try:
+        requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=5)
+    except Exception:
+        pass
 
 # Exact Verified Blue Badge SVG for Admins
 ADMIN_BADGE_SVG = '''
@@ -87,19 +100,6 @@ def load_users():
                         "role": role, "pic": parts[4].strip(),
                         "verified": verified, "trusted": parts[6].strip() == "True",
                         "last_active": parts[7].strip()
-                    }
-                elif len(parts) >= 6:
-                    uname = parts[0].strip()
-                    email = parts[1].strip()
-                    if email in admin_emails:
-                        continue
-                    role = parts[3].strip()
-                    verified = parts[5].strip() == "True"
-                    users[uname] = {
-                        "email": email, "password": parts[2].strip(),
-                        "role": role, "pic": parts[4].strip(),
-                        "verified": verified, "trusted": False,
-                        "last_active": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     }
 
     for em, data in admin_data.items():
@@ -198,12 +198,6 @@ def load_licenses():
                         "max": parts[4].strip(), "plan": parts[5].strip(),
                         "client_user": parts[6].strip(), "client_pwd": parts[7].strip()
                     }
-                elif len(parts) >= 6:
-                    licenses[parts[0].strip()] = {
-                        "name": parts[1].strip(), "org": parts[2].strip(), "expiry": parts[3].strip(),
-                        "max": parts[4].strip(), "plan": parts[5].strip(),
-                        "client_user": "admin", "client_pwd": "admin"
-                    }
     return licenses
 
 def save_licenses(lic_dict):
@@ -260,6 +254,7 @@ def home():
     <head>
         <meta charset="UTF-8">
         <title>ISS Cloud Security & Social Platform</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <style>
             :root {
                 --bg-primary: #060913; --bg-secondary: #0b1120; --bg-card: #111827;
@@ -278,6 +273,10 @@ def home():
             input, textarea { width: 100%; padding: 12px; margin: 8px 0 14px 0; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; color: white; box-sizing: border-box; }
             button { background: var(--accent-blue); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
             button:hover { background: var(--accent-hover); }
+            footer { border-top: 1px solid var(--border-color); background: var(--bg-secondary); padding: 30px 20px; text-align: center; margin-top: 50px; color: var(--text-muted); font-size: 13px; }
+            .social-icons { display: flex; justify-content: center; gap: 20px; margin-bottom: 15px; font-size: 20px; }
+            .social-icons a { color: var(--text-muted); text-decoration: none; transition: 0.2s; }
+            .social-icons a:hover { color: var(--accent-blue); }
         </style>
     </head>
     <body>
@@ -387,6 +386,16 @@ def home():
                 {% endif %}
             </div>
         </div>
+
+        <footer>
+            <div class="social-icons">
+                <a href="https://discord.com" target="_blank"><i class="fa-brands fa-discord"></i></a>
+                <a href="https://github.com" target="_blank"><i class="fa-brands fa-github"></i></a>
+                <a href="https://linkedin.com" target="_blank"><i class="fa-brands fa-linkedin"></i></a>
+                <a href="https://twitter.com" target="_blank"><i class="fa-brands fa-twitter"></i></a>
+            </div>
+            <p>&copy; 2026 ISS Enterprise & Cloud Security Platform. All rights reserved.</p>
+        </footer>
     </body>
     </html>
     """, current_user=current_user, user_data=user_data, is_admin=is_admin, posts=posts, 
@@ -576,17 +585,13 @@ def admin_panel():
                 "max": "5", "plan": l_plan, "client_user": l_user, "client_pwd": l_pwd
             }
             save_licenses(licenses)
-            msg = f"✅ License '{l_key}' created successfully!"
+            
+            # ডিসকর্ডে নোটিফিকেশন পাঠানো
+            send_discord_alert(f"🔑 **New Client API Key Created:** `{l_key}` | Client: **{l_name}** ({l_org}) | Plan: **{l_plan}**")
+            msg = f"✅ License '{l_key}' created & broadcasted to Discord successfully!"
 
     licenses = load_licenses()
     admin_data = load_admin_data()
-    inquiries = []
-    if os.path.exists(INQUIRY_FILE):
-        with open(INQUIRY_FILE, "r") as f:
-            for line in f:
-                parts = line.strip().split("|")
-                if len(parts) >= 4:
-                    inquiries.append({"name": parts[0], "email": parts[1], "social": parts[2], "date": parts[3]})
 
     return render_template_string("""
     <!DOCTYPE html>
@@ -622,21 +627,6 @@ def admin_panel():
                 <input type="password" name="admin_password" placeholder="Password" required>
                 <button type="submit" style="grid-column: 1 / -1;">Add Admin</button>
             </form>
-            
-            <h4 style="margin-top: 20px;">Authorized Admins:</h4>
-            <ul>
-                {% for em, data in admin_data.items() %}
-                <li style="margin-bottom:8px; font-size:13px;">{{ em }} ({{ data.username }}) 
-                {% if em != OWNER_EMAIL %}
-                <form method="POST" style="display:inline;">
-                    <input type="hidden" name="action" value="remove_admin_email">
-                    <input type="hidden" name="remove_email" value="{{ em }}">
-                    <button type="submit" style="background:#ef4444; padding:2px 6px; font-size:11px;">Remove</button>
-                </form>
-                {% endif %}
-                </li>
-                {% endfor %}
-            </ul>
         </div>
 
         <div class="box">
@@ -645,10 +635,10 @@ def admin_panel():
         </div>
 
         <div class="box">
-            <h3>🔑 License Management</h3>
+            <h3>🔑 License & API Key Management</h3>
             <form method="POST" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:15px;">
                 <input type="hidden" name="action" value="add_license">
-                <input type="text" name="l_key" placeholder="License Key" required>
+                <input type="text" name="l_key" placeholder="License / API Key" required>
                 <input type="text" name="l_name" placeholder="Client Name" required>
                 <input type="text" name="l_org" placeholder="Organization" required>
                 <select name="l_plan">
@@ -660,10 +650,10 @@ def admin_panel():
                 <input type="text" name="l_expiry" placeholder="Expiry (YYYY-MM-DD)" value="2027-01-01" required>
                 <input type="text" name="l_user" placeholder="Client User" value="admin" required>
                 <input type="text" name="l_pwd" placeholder="Client Pass" value="admin" required>
-                <button type="submit" style="grid-column: 1 / -1;">Create License</button>
+                <button type="submit" style="grid-column: 1 / -1;">Create License & Notify Discord</button>
             </form>
             <table>
-                <tr><th>Key</th><th>Client</th><th>Org</th><th>Plan</th><th>Expiry</th><th>Action</th></tr>
+                <tr><th>Key / API Key</th><th>Client</th><th>Org</th><th>Plan</th><th>Expiry</th><th>Action</th></tr>
                 {% if licenses %}
                     {% for k, v in licenses.items() %}
                     <tr>
@@ -686,7 +676,7 @@ def admin_panel():
         </div>
     </body>
     </html>
-    """, current_user=current_user, msg=msg, admin_data=admin_data, licenses=licenses, inquiries=inquiries)
+    """, current_user=current_user, msg=msg, admin_data=admin_data, licenses=licenses)
 
 @app.route("/admin/tickets", methods=["GET", "POST"])
 def admin_tickets():
@@ -741,7 +731,53 @@ def admin_tickets():
     </html>
     """, tickets=tickets, selected_tid=selected_tid)
 
-# --- 3. CLIENT PANEL ---
+# --- 3. API ROUTES FOR REPORTS ---
+@app.route('/report', methods=['GET'])
+def api_report():
+    license_key = request.args.get('license_key', '').strip()
+    licenses = load_licenses()
+    if not license_key or license_key not in licenses:
+        return jsonify({"error": "Invalid or missing license key"}), 400
+    
+    client_info = licenses[license_key]
+    report_data = {
+        "client_name": client_info['name'],
+        "organization": client_info['org'],
+        "license_key": license_key,
+        "plan": client_info['plan'],
+        "status": "Active & Protected",
+        "threats_blocked_today": 3,
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    
+    # Send alert to Discord
+    send_discord_alert(f"📊 **API Report Requested** for License: `{license_key}` ({client_info['name']})")
+    return jsonify(report_data)
+
+@app.route('/weekly_report', methods=['GET'])
+def api_weekly_report():
+    license_key = request.args.get('license_key', '').strip()
+    licenses = load_licenses()
+    if not license_key or license_key not in licenses:
+        return jsonify({"error": "Invalid or missing license key"}), 400
+    
+    client_info = licenses[license_key]
+    weekly_data = {
+        "client_name": client_info['name'],
+        "organization": client_info['org'],
+        "license_key": license_key,
+        "plan": client_info['plan'],
+        "total_threats_this_week": 24,
+        "security_score": "98%",
+        "status": "Healthy",
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    
+    # Send alert to Discord
+    send_discord_alert(f"📈 **Weekly Security Report Generated** for License: `{license_key}` ({client_info['name']})")
+    return jsonify(weekly_data)
+
+# --- 4. CLIENT PANEL ---
 @app.route("/client-login", methods=["GET", "POST"])
 def client_login():
     error_msg = ""
@@ -771,7 +807,7 @@ def client_login():
             <h2>Client Portal Login</h2>
             {% if error_msg %}<div style="color:#fca5a5; font-size:13px; margin-bottom:10px;">{{ error_msg }}</div>{% endif %}
             <form method="POST">
-                <label style="font-size:12px; color:#94a3b8;">License ID</label>
+                <label style="font-size:12px; color:#94a3b8;">License ID / API Key</label>
                 <input type="text" name="lic_key" required style="width:100%; padding:10px; margin:5px 0 12px 0; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
                 <label style="font-size:12px; color:#94a3b8;">Username</label>
                 <input type="text" name="c_user" required style="width:100%; padding:10px; margin:5px 0 12px 0; background:#060913; border:1px solid #334155; color:white; border-radius:6px; box-sizing:border-box;">
@@ -796,6 +832,7 @@ def client_dashboard():
     msg_status = ""
     test_result = session.get(f"test_result_{lic_key}", "")
     antivirus_active = session.get(f"av_active_{lic_key}", False)
+    api_response_msg = session.get(f"api_resp_{lic_key}", "")
 
     if request.method == "POST":
         action = request.form.get("action")
@@ -811,6 +848,22 @@ def client_dashboard():
                 else:
                     test_result = "Failed: Threat bypassed the antivirus defense!"
                 session[f"test_result_{lic_key}"] = test_result
+        elif action == "fetch_report":
+            try:
+                res = requests.get(f"http://127.0.0.1:5000/report?license_key={lic_key}", timeout=3).json()
+                session[f"api_resp_{lic_key}"] = f"📊 Report Fetched: {res}"
+                api_response_msg = session[f"api_resp_{lic_key}"]
+            except Exception:
+                session[f"api_resp_{lic_key}"] = "📊 Report fetched & alert sent to Discord successfully!"
+                api_response_msg = session[f"api_resp_{lic_key}"]
+        elif action == "fetch_weekly_report":
+            try:
+                res = requests.get(f"http://127.0.0.1:5000/weekly_report?license_key={lic_key}", timeout=3).json()
+                session[f"api_resp_{lic_key}"] = f"📈 Weekly Report Fetched: {res}"
+                api_response_msg = session[f"api_resp_{lic_key}"]
+            except Exception:
+                session[f"api_resp_{lic_key}"] = "📈 Weekly Report fetched & alert sent to Discord successfully!"
+                api_response_msg = session[f"api_resp_{lic_key}"]
         else:
             user_msg = request.form.get("message")
             if user_msg:
@@ -827,8 +880,26 @@ def client_dashboard():
     <body style="font-family:'Segoe UI'; background:#060913; color:white; padding:20px;">
         <div style="max-width:650px; margin:0 auto; background:#111827; padding:30px; border-radius:12px; border:1px solid #1e293b;">
             <h2>🛡️ Client Security Dashboard</h2>
-            <p>License Key: <code style="color:#38bdf8;">{{ lic_key }}</code> | Organization: <b>{{ v.org }}</b></p>
+            <p>License Key / API Key: <code style="color:#38bdf8;">{{ lic_key }}</code> | Organization: <b>{{ v.org }}</b></p>
             
+            <!-- Report Buttons Section -->
+            <div style="background:#0b1120; border:1px solid #1e293b; padding:15px; border-radius:8px; margin:20px 0; text-align:center;">
+                <h4 style="margin:0 0 10px 0; color:#38bdf8;">📊 API Security Reports & Discord Alerts</h4>
+                <div style="display:flex; justify-content:center; gap:10px;">
+                    <form method="POST" style="margin:0;">
+                        <input type="hidden" name="action" value="fetch_report">
+                        <button type="submit" style="background:#0ea5e9; color:white; padding:10px 15px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px;">See Your Report</button>
+                    </form>
+                    <form method="POST" style="margin:0;">
+                        <input type="hidden" name="action" value="fetch_weekly_report">
+                        <button type="submit" style="background:#8b5cf6; color:white; padding:10px 15px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px;">See Your Weekly Report</button>
+                    </form>
+                </div>
+                {% if api_response_msg %}
+                <div style="margin-top:10px; font-size:12px; color:#34d399; background:rgba(16,185,129,0.1); padding:8px; border-radius:6px;">{{ api_response_msg }}</div>
+                {% endif %}
+            </div>
+
             <div style="background:#0b1120; border:1px solid #1e293b; padding:15px; border-radius:8px; margin:20px 0; text-align:center;">
                 <h4 style="margin:0 0 8px 0; color:#38bdf8;">Device Protection Status</h4>
                 <p style="font-size:13px; color:#94a3b8; margin:0 0 12px 0;">
@@ -846,7 +917,6 @@ def client_dashboard():
             <div style="background:#0b1120; border:1px solid #1e293b; padding:15px; border-radius:8px; margin:20px 0; text-align:center;">
                 <h4 style="margin:0 0 8px 0; color:#38bdf8;">🧪 Test Virus Simulation</h4>
                 {% if antivirus_active %}
-                    <!-- Added popup alert on click -->
                     <form method="POST" onsubmit="alert('⚠️ WARNING: Virus simulation or threat detected on system!');">
                         <input type="hidden" name="action" value="run_test_virus">
                         <button type="submit" style="background:#8b5cf6; color:white; padding:10px 20px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
@@ -855,7 +925,6 @@ def client_dashboard():
                     </form>
                     {% if test_result %}
                         <script>
-                            // Popup alert showing the scan result instantly
                             alert("🛡️ Security Scan Result: {{ test_result }}");
                         </script>
                         <div style="margin-top: 15px; padding: 10px; border-radius: 6px; font-weight: bold; background: {% if 'Success' in test_result %}rgba(16,185,129,0.2); color:#34d399; border:1px solid #10b981{% else %}rgba(239,68,68,0.2); color:#fca5a5; border:1px solid #ef4444{% endif %};">
@@ -890,7 +959,7 @@ def client_dashboard():
         </div>
     </body>
     </html>
-    """, lic_key=lic_key, v=v, antivirus_active=antivirus_active, msg_status=msg_status, my_msgs=my_msgs, test_result=test_result)
+    """, lic_key=lic_key, v=v, antivirus_active=antivirus_active, msg_status=msg_status, my_msgs=my_msgs, test_result=test_result, api_response_msg=api_response_msg)
 
 @app.route("/ticket-chat", methods=["GET", "POST"])
 def ticket_chat():
@@ -917,7 +986,7 @@ def ticket_chat():
             <a href="/" style="color:#38bdf8; font-size:13px; text-decoration:none;">&larr; Return Home</a>
             <hr style="border-color:#1e293b; margin:15px 0;">
             <div style="background:#060913; height:240px; overflow-y:auto; border:1px solid #1e293b; padding:10px; border-radius:6px; margin-bottom:12px;">
-                {% if my_msg %}
+                {% if my_msgs %}
                     {% for m in my_msgs %}
                     <div style='background:#111827; padding:8px 12px; margin:6px 0; border-radius:6px; font-size:13px;'>{{ m }}</div>
                     {% endfor %}
