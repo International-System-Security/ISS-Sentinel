@@ -6,7 +6,7 @@ import random
 import requests
 
 app = Flask(__name__)
-app.secret_key = "iss_enterprise_security_secret_key_v17_discord"
+app.secret_key = "iss_enterprise_security_secret_key_v18_final"
 
 UPLOAD_FOLDER = 'static/uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -23,7 +23,7 @@ OWNER_EMAIL = "admin@iss.com"
 OWNER_USERNAME = "ibr@him"
 OWNER_PASSWORD = "muhib###5869@"
 
-# ডিসকর্ড ওয়েবহুক ইউআরএল
+# আপনার দেওয়া ডিসকর্ড ওয়েবহুক ইউআরএল
 DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1556104485439275099/dzkin3uRRAl68W6xW5vjDnwDt5j5yoV04AyMH1xbBEep6PDO0mYn28TmLfLbNoHH3MPE"
 
 def send_discord_alert(message_text):
@@ -281,7 +281,7 @@ def home():
     </head>
     <body>
         <nav class="navbar">
-            <a href="/" class="logo">🛡️ ISS <span>PLATFORM</span></a>
+            <a href="/" class="logo">🛡️️ ISS <span>PLATFORM</span></a>
             <div class="nav-links">
                 <a href="#social">ISS Social</a>
                 <a href="#plans">Membership Plans</a>
