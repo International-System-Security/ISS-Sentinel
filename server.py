@@ -4,9 +4,12 @@ from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 import random
 import requests
+import threading
+import discord
+from discord.ext import commands
 
 app = Flask(__name__)
-app.secret_key = "iss_enterprise_security_secret_key_v18_final"
+app.secret_key = "iss_enterprise_security_secret_key_v19_bot"
 
 UPLOAD_FOLDER = 'static/uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -23,8 +26,11 @@ OWNER_EMAIL = "admin@iss.com"
 OWNER_USERNAME = "ibr@him"
 OWNER_PASSWORD = "muhib###5869@"
 
-# আপনার দেওয়া ডিসকর্ড ওয়েবহুক ইউআরএল
+# আপনার ডিসকর্ড ওয়েবহুক ইউআরএল
 DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1556104485439275099/dzkin3uRRAl68W6xW5vjDnwDt5j5yoV04AyMH1xbBEep6PDO0mYn28TmLfLbNoHH3MPE"
+
+# আপনার ডিসকর্ড বটের টোকেন এখানে বসান
+BOT_TOKEN = os.environ.get("DISCORD_BOT_TOKEN", "your_token_here")
 
 def send_discord_alert(message_text):
     if not DISCORD_WEBHOOK_URL:
@@ -281,7 +287,7 @@ def home():
     </head>
     <body>
         <nav class="navbar">
-            <a href="/" class="logo">🛡️️ ISS <span>PLATFORM</span></a>
+            <a href="/" class="logo">🛡️ ISS <span>PLATFORM</span></a>
             <div class="nav-links">
                 <a href="#social">ISS Social</a>
                 <a href="#plans">Membership Plans</a>
@@ -585,8 +591,6 @@ def admin_panel():
                 "max": "5", "plan": l_plan, "client_user": l_user, "client_pwd": l_pwd
             }
             save_licenses(licenses)
-            
-            # ডিসকর্ডে নোটিফিকেশন পাঠানো
             send_discord_alert(f"🔑 **New Client API Key Created:** `{l_key}` | Client: **{l_name}** ({l_org}) | Plan: **{l_plan}**")
             msg = f"✅ License '{l_key}' created & broadcasted to Discord successfully!"
 
@@ -749,8 +753,6 @@ def api_report():
         "threats_blocked_today": 3,
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
-    
-    # Send alert to Discord
     send_discord_alert(f"📊 **API Report Requested** for License: `{license_key}` ({client_info['name']})")
     return jsonify(report_data)
 
@@ -772,8 +774,6 @@ def api_weekly_report():
         "status": "Healthy",
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
-    
-    # Send alert to Discord
     send_discord_alert(f"📈 **Weekly Security Report Generated** for License: `{license_key}` ({client_info['name']})")
     return jsonify(weekly_data)
 
@@ -882,7 +882,6 @@ def client_dashboard():
             <h2>🛡️ Client Security Dashboard</h2>
             <p>License Key / API Key: <code style="color:#38bdf8;">{{ lic_key }}</code> | Organization: <b>{{ v.org }}</b></p>
             
-            <!-- Report Buttons Section -->
             <div style="background:#0b1120; border:1px solid #1e293b; padding:15px; border-radius:8px; margin:20px 0; text-align:center;">
                 <h4 style="margin:0 0 10px 0; color:#38bdf8;">📊 API Security Reports & Discord Alerts</h4>
                 <div style="display:flex; justify-content:center; gap:10px;">
@@ -913,7 +912,6 @@ def client_dashboard():
                 </form>
             </div>
 
-            <!-- Test Virus Simulation Section -->
             <div style="background:#0b1120; border:1px solid #1e293b; padding:15px; border-radius:8px; margin:20px 0; text-align:center;">
                 <h4 style="margin:0 0 8px 0; color:#38bdf8;">🧪 Test Virus Simulation</h4>
                 {% if antivirus_active %}
@@ -1001,5 +999,35 @@ def ticket_chat():
     </html>
     """, current_user=current_user, my_msgs=my_msgs)
 
+# --- DISCORD BOT SETUP & BACKGROUND THREAD ---
+intents = discord.Intents.default()
+intents.message_content = True
+bot = commands.Bot(command_prefix="!", intents=intents)
+
+@bot.event
+async def on_ready():
+    print(f"Discord Bot logged in as {bot.user.name}")
+
+@bot.command(name="report")
+async def bot_report(ctx):
+    await ctx.send("🛡️ ISS Security Report: System status is secure and active (3 threats blocked today).")
+
+@bot.command(name="weekly_report")
+async def bot_weekly_report(ctx):
+    await ctx.send("📈 ISS Weekly Security Report: 24 threats blocked, 98% security score.")
+
+def run_discord_bot():
+    try:
+        bot.run(BOT_TOKEN)
+    except Exception as e:
+        print(f"Bot error: {e}")
+
 if __name__ == "__main__":
+    # ব্যাকগ্রাউন্ড থ্রেডে ডিসকর্ড বট স্টার্ট হবে
+    bot_thread = threading.Thread(target=run_discord_bot)
+    bot_thread.daemon = True
+    bot_thread.start()
+    
+    # ফ্লাস্ক সার্ভার স্টার্ট
     app.run(host="0.0.0.0", port=5000, debug=True)
+
