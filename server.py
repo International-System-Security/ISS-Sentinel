@@ -29,9 +29,6 @@ OWNER_PASSWORD = "muhib###5869@"
 # আপনার ডিসকর্ড ওয়েবহুক ইউআরএল
 DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1556104485439275099/dzkin3uRRAl68W6xW5vjDnwDt5j5yoV04AyMH1xbBEep6PDO0mYn28TmLfLbNoHH3MPE"
 
-# আপনার ডিসকর্ড বটের টোকেন এখানে বসান
-BOT_TOKEN = os.environ.get("DISCORD_BOT_TOKEN", "your_token_here")
-
 def send_discord_alert(message_text):
     if not DISCORD_WEBHOOK_URL:
         return
@@ -999,7 +996,9 @@ def ticket_chat():
     </html>
     """, current_user=current_user, my_msgs=my_msgs)
 
-# --- DISCORD BOT SETUP & BACKGROUND THREAD ---
+# --- 5. DISCORD BOT SETUP & BACKGROUND THREAD ---
+BOT_TOKEN = os.environ.get("DISCORD_BOT_TOKEN")
+
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
@@ -1017,10 +1016,13 @@ async def bot_weekly_report(ctx):
     await ctx.send("📈 ISS Weekly Security Report: 24 threats blocked, 98% security score.")
 
 def run_discord_bot():
-    try:
-        bot.run(BOT_TOKEN)
-    except Exception as e:
-        print(f"Bot error: {e}")
+    if BOT_TOKEN:
+        try:
+            bot.run(BOT_TOKEN)
+        except Exception as e:
+            print(f"Bot error: {e}")
+    else:
+        print("Bot token not found in environment variables!")
 
 if __name__ == "__main__":
     # ব্যাকগ্রাউন্ড থ্রেডে ডিসকর্ড বট স্টার্ট হবে
@@ -1030,4 +1032,3 @@ if __name__ == "__main__":
     
     # ফ্লাস্ক সার্ভার স্টার্ট
     app.run(host="0.0.0.0", port=5000, debug=True)
-
