@@ -27,8 +27,7 @@ OWNER_USERNAME = "ibr@him"
 OWNER_PASSWORD = "muhib###5869@"
 
 # আপনার ডিসকর্ড ওয়েবহুক ইউআরএল
-DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1556104485439275099/dzkin3uRRAl68W6xW5vjDnwDt5j5yoV04AyMH1xbBEep6PDO0mYn28TmLfLbNoHH3MPE"
-
+DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1556617536773292113/_tB_8xwYlNU3RY7XI53WsOFXTlr2lrGdsj2OJediCvP0xxM7YlMKPS62ZEgxLiRPJgXq"
 def send_discord_alert(message_text):
     if not DISCORD_WEBHOOK_URL:
         return
