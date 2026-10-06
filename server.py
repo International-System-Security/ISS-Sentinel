@@ -1,4 +1,5 @@
 import os
+import asyncio
 import secrets
 import sqlite3
 import threading
@@ -6,6 +7,8 @@ from datetime import datetime, date
 from functools import wraps
 
 import requests
+import discord
+from discord.ext import commands
 from flask import (Flask, render_template_string, request, redirect,
                    url_for, session, abort, g)
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -28,6 +31,7 @@ OWNER_EMAIL = os.environ["OWNER_EMAIL"]
 OWNER_USERNAME = os.environ.get("OWNER_USERNAME", "owner")
 OWNER_PASSWORD = os.environ["OWNER_PASSWORD"]
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
+BOT_TOKEN = os.environ.get("DISCORD_BOT_TOKEN")
 
 limiter = Limiter(get_remote_address, app=app,
                   default_limits=["200 per hour"], storage_uri="memory://")
@@ -468,26 +472,60 @@ def client_ticket(tid):
 
 
 # ------------------------------------------------------------------
-# Stats API (আলাদা সার্ভারে চলা ডিসকর্ড বট এখান থেকে সংখ্যা নেবে)
+# Health check (UptimeRobot এখানে পিং করবে, সার্ভার জেগে থাকবে)
 # ------------------------------------------------------------------
-STATS_API_KEY = os.environ.get("STATS_API_KEY", "")
+@app.route("/health")
+@limiter.exempt
+def health():
+    return "OK"
 
 
-@app.route("/api/stats")
-@limiter.limit("30 per minute")
-def api_stats():
-    sent = request.headers.get("X-API-Key", "")
-    if not STATS_API_KEY or not secrets.compare_digest(sent, STATS_API_KEY):
-        abort(403)
-    db = get_db()
-    return {
-        "licenses": db.execute("SELECT COUNT(*) FROM licenses").fetchone()[0],
-        "open_tickets": db.execute("SELECT COUNT(*) FROM tickets WHERE status='open'").fetchone()[0],
-    }
+# ------------------------------------------------------------------
+# Discord bot
+# ------------------------------------------------------------------
+intents = discord.Intents.default()
+intents.message_content = True
+bot = commands.Bot(command_prefix="!", intents=intents)
+
+
+def stats():
+    conn = connect()
+    lic = conn.execute("SELECT COUNT(*) FROM licenses").fetchone()[0]
+    open_t = conn.execute("SELECT COUNT(*) FROM tickets WHERE status='open'").fetchone()[0]
+    conn.close()
+    return lic, open_t
+
+
+@bot.event
+async def on_ready():
+    print(f"Discord Bot logged in as {bot.user.name}")
+
+
+@bot.command(name="report")
+async def bot_report(ctx):
+    lic, open_t = stats()
+    await ctx.send(f"🛡️ ISS Report: system active. Licenses: {lic} | Open tickets: {open_t}")
+
+
+@bot.command(name="weekly_report")
+async def bot_weekly_report(ctx):
+    lic, open_t = stats()
+    await ctx.send(f"📈 ISS Weekly Report: {lic} active licenses, {open_t} open tickets.")
+
+
+def run_discord_bot():
+    if not BOT_TOKEN:
+        print("DISCORD_BOT_TOKEN not set - bot disabled.")
+        return
+    try:
+        asyncio.run(bot.start(BOT_TOKEN))
+    except Exception as e:
+        print(f"Bot error: {e}")
 
 
 init_db()
 
 if __name__ == "__main__":
+    threading.Thread(target=run_discord_bot, daemon=True).start()
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)),
             debug=os.environ.get("FLASK_DEBUG", "0") == "1", use_reloader=False)
