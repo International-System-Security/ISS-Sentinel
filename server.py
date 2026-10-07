@@ -7,7 +7,9 @@ from datetime import datetime, date, timedelta
 from functools import wraps
 
 import discord
+from discord import app_commands
 from discord.ext import commands
+from typing import Literal
 from flask import (Flask, render_template_string, request, redirect,
                    url_for, session, abort, g)
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -487,11 +489,23 @@ def health():
 
 
 # ------------------------------------------------------------------
-# Discord bot (সব কমান্ড শুধু সার্ভারের Administrator-দের জন্য)
+# Discord bot - Slash (/) কমান্ড, শুধু Administrator-দের জন্য
 # ------------------------------------------------------------------
 intents = discord.Intents.default()
-intents.message_content = True
-bot = commands.Bot(command_prefix="!", intents=intents)
+bot = commands.Bot(command_prefix=commands.when_mentioned, intents=intents)
+GUILD_ID = os.environ.get("DISCORD_GUILD_ID")  # ঐচ্ছিক: দিলে কমান্ড সাথে সাথে আসে
+
+
+async def _setup_hook():
+    if GUILD_ID:
+        guild = discord.Object(id=int(GUILD_ID))
+        bot.tree.copy_global_to(guild=guild)
+        await bot.tree.sync(guild=guild)
+    else:
+        await bot.tree.sync()
+
+
+bot.setup_hook = _setup_hook
 
 
 def q_one(sql, args=()):
@@ -508,11 +522,12 @@ def q_all(sql, args=()):
     return rows
 
 
-def admin_cmd(name):
+def slash(name, desc):
     def deco(fn):
-        fn = commands.has_permissions(administrator=True)(fn)
-        fn = commands.guild_only()(fn)
-        return bot.command(name=name)(fn)
+        fn = app_commands.checks.has_permissions(administrator=True)(fn)
+        fn = app_commands.default_permissions(administrator=True)(fn)
+        fn = app_commands.guild_only()(fn)
+        return bot.tree.command(name=name, description=desc)(fn)
     return deco
 
 
@@ -521,94 +536,98 @@ async def on_ready():
     print(f"Discord Bot logged in as {bot.user.name}")
 
 
-@bot.event
-async def on_command_error(ctx, err):
-    if isinstance(err, commands.MissingPermissions):
-        await ctx.send("⛔ শুধু সার্ভারের Administrator এই কমান্ড চালাতে পারবে।")
-    elif isinstance(err, commands.MissingRequiredArgument):
-        await ctx.send(f"⚠️ কমান্ড অসম্পূর্ণ। নিয়ম: `!help {ctx.command.name}`")
-    elif isinstance(err, (commands.CommandNotFound, commands.NoPrivateMessage)):
-        return
+@bot.tree.error
+async def on_app_error(interaction: discord.Interaction, error):
+    if isinstance(error, app_commands.MissingPermissions):
+        msg = "⛔ শুধু সার্ভারের Administrator এই কমান্ড চালাতে পারবে।"
     else:
-        print(f"Command error: {err}")
-        await ctx.send("⚠️ কিছু একটা সমস্যা হয়েছে।")
+        print(f"Command error: {error}")
+        msg = "⚠️ কিছু একটা সমস্যা হয়েছে।"
+    if interaction.response.is_done():
+        await interaction.followup.send(msg, ephemeral=True)
+    else:
+        await interaction.response.send_message(msg, ephemeral=True)
 
 
-@admin_cmd("report")
-async def report(ctx):
+@slash("report", "সিস্টেমের বর্তমান অবস্থা")
+async def report(interaction: discord.Interaction):
     lic = q_one("SELECT COUNT(*) FROM licenses")
     op = q_one("SELECT COUNT(*) FROM tickets WHERE status='open'")
-    await ctx.send(f"🛡️ ISS Report: system active.\nLicenses: {lic} | Open tickets: {op}")
+    await interaction.response.send_message(
+        f"🛡️ ISS Report: system active.\nLicenses: {lic} | Open tickets: {op}")
 
 
-@admin_cmd("weekly_report")
-async def weekly_report(ctx):
+@slash("weekly_report", "গত ৭ দিনের রিপোর্ট")
+async def weekly_report(interaction: discord.Interaction):
     since = (datetime.utcnow() - timedelta(days=7)).strftime("%Y-%m-%d %H:%M")
     nl = q_one("SELECT COUNT(*) FROM licenses WHERE created>=?", (since,))
     nt = q_one("SELECT COUNT(*) FROM tickets WHERE created>=?", (since,))
     op = q_one("SELECT COUNT(*) FROM tickets WHERE status='open'")
-    await ctx.send(f"📈 ISS Weekly Report (7 days)\nNew licenses: {nl} | New tickets: {nt} | Open tickets now: {op}")
+    await interaction.response.send_message(
+        f"📈 ISS Weekly Report (7 days)\nNew licenses: {nl} | New tickets: {nt} | Open tickets now: {op}")
 
 
-@admin_cmd("setalert")
-async def setalert(ctx):
-    """যে চ্যানেলে লিখবেন, অ্যালার্ট সেখানে আসবে"""
+@slash("setalert", "এই চ্যানেলে অ্যালার্ট পাঠানো শুরু করো")
+async def setalert(interaction: discord.Interaction):
     conn = connect()
-    conn.execute("INSERT OR REPLACE INTO settings VALUES('alert_channel', ?)", (str(ctx.channel.id),))
+    conn.execute("INSERT OR REPLACE INTO settings VALUES('alert_channel', ?)",
+                 (str(interaction.channel_id),))
     conn.commit()
     conn.close()
-    await ctx.send("✅ এখন থেকে অ্যালার্ট এই চ্যানেলে আসবে।")
+    await interaction.response.send_message("✅ এখন থেকে অ্যালার্ট এই চ্যানেলে আসবে।")
 
 
-@admin_cmd("licenses")
-async def licenses_cmd(ctx):
+@slash("licenses", "সর্বশেষ ১৫টি লাইসেন্স দেখাও")
+async def licenses_cmd(interaction: discord.Interaction):
     rows = q_all("SELECT key,name,org,plan,expiry FROM licenses ORDER BY created DESC LIMIT 15")
     if not rows:
-        return await ctx.send("কোনো লাইসেন্স নেই।")
+        return await interaction.response.send_message("কোনো লাইসেন্স নেই।", ephemeral=True)
     lines = [f"`{r['key']}` | {r['name']} ({r['org']}) | {r['plan']} | {r['expiry']}" for r in rows]
-    await ctx.send("🔑 **Licenses (সর্বশেষ ১৫টি)**\n" + "\n".join(lines))
+    await interaction.response.send_message("🔑 **Licenses**\n" + "\n".join(lines), ephemeral=True)
 
 
-@admin_cmd("newlicense")
-async def newlicense(ctx, name: str, org: str, plan: str = "Basic", days: int = 365):
-    """ব্যবহার: !newlicense "Client Name" "Organization" Pro 365"""
-    if not 1 <= days <= 3650:
-        return await ctx.send("⚠️ days ১ থেকে ৩৬৫০ এর মধ্যে দিন।")
+@slash("newlicense", "নতুন ক্লায়েন্ট লাইসেন্স তৈরি করো")
+@app_commands.describe(name="ক্লায়েন্টের নাম", org="প্রতিষ্ঠানের নাম",
+                       plan="প্ল্যান", days="কত দিনের মেয়াদ (ডিফল্ট ৩৬৫)")
+async def newlicense(interaction: discord.Interaction, name: str, org: str,
+                     plan: Literal["Basic Plan", "Pro Plan", "Enterprise Plan"] = "Basic Plan",
+                     days: app_commands.Range[int, 1, 3650] = 365):
     key = "KEY-" + secrets.token_hex(6).upper()
     user = "client" + secrets.token_hex(2)
     pwd = secrets.token_urlsafe(9)
     expiry = (date.today() + timedelta(days=days)).isoformat()
-    try:
-        await ctx.author.send(
-            f"🔑 **নতুন লাইসেন্স**\nClient: {name} ({org}) | Plan: {plan}\n"
-            f"License Key: `{key}`\nUsername: `{user}`\nPassword: `{pwd}`\nExpiry: {expiry}")
-    except discord.Forbidden:
-        return await ctx.send("⚠️ আপনার DM বন্ধ। DM চালু করে আবার চেষ্টা করুন (পাসওয়ার্ড শুধু DM-এ যায়)।")
     conn = connect()
     conn.execute("INSERT INTO licenses VALUES(?,?,?,?,?,?,?,?,?)",
                  (key, name, org, expiry, 5, plan, user, generate_password_hash(pwd), now()))
     conn.commit()
     conn.close()
-    await ctx.send(f"✅ লাইসেন্স `{key}` তৈরি হয়েছে। লগইনের তথ্য আপনার DM-এ পাঠানো হয়েছে।")
+    # শুধু আপনি দেখতে পাবেন (ephemeral)
+    await interaction.response.send_message(
+        f"🔑 **নতুন লাইসেন্স** (শুধু আপনি দেখছেন)\nClient: {name} ({org}) | {plan}\n"
+        f"License Key: `{key}`\nUsername: `{user}`\nPassword: `{pwd}`\nExpiry: {expiry}\n"
+        f"⚠️ পাসওয়ার্ড আর দেখা যাবে না, এখনই ক্লায়েন্টকে দিন।", ephemeral=True)
+    send_discord_alert(f"🔑 New license `{key}` | **{name}** ({org}) | {plan}")
 
 
-@admin_cmd("deletelicense")
-async def deletelicense(ctx, key: str):
+@slash("deletelicense", "লাইসেন্স মুছে ফেলো")
+@app_commands.describe(key="লাইসেন্স কী, যেমন KEY-ABC123")
+async def deletelicense(interaction: discord.Interaction, key: str):
     conn = connect()
-    cur = conn.execute("DELETE FROM licenses WHERE key=?", (key,))
+    cur = conn.execute("DELETE FROM licenses WHERE key=?", (key.strip(),))
     conn.commit()
     conn.close()
-    await ctx.send("🗑️ মুছে ফেলা হয়েছে।" if cur.rowcount else "⚠️ এই কী পাওয়া যায়নি।")
+    await interaction.response.send_message(
+        "🗑️ মুছে ফেলা হয়েছে।" if cur.rowcount else "⚠️ এই কী পাওয়া যায়নি।", ephemeral=True)
 
 
-@admin_cmd("tickets")
-async def tickets_cmd(ctx):
+@slash("tickets", "খোলা সাপোর্ট টিকিটের তালিকা")
+async def tickets_cmd(interaction: discord.Interaction):
     rows = q_all("""SELECT t.id,t.subject,t.created,l.org FROM tickets t
         LEFT JOIN licenses l ON l.key=t.license_key WHERE t.status='open' ORDER BY t.id DESC LIMIT 15""")
     if not rows:
-        return await ctx.send("✅ কোনো খোলা টিকিট নেই।")
+        return await interaction.response.send_message("✅ কোনো খোলা টিকিট নেই।")
     lines = [f"#{r['id']} | {r['org']} | {r['subject']} | {r['created']}" for r in rows]
-    await ctx.send("🎫 **Open tickets**\n" + "\n".join(lines))
+    await interaction.response.send_message("🎫 **Open tickets**\n" + "\n".join(lines))
 
 
 def run_discord_bot():
