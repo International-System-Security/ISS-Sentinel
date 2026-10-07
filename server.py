@@ -3,10 +3,9 @@ import asyncio
 import secrets
 import sqlite3
 import threading
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from functools import wraps
 
-import requests
 import discord
 from discord.ext import commands
 from flask import (Flask, render_template_string, request, redirect,
@@ -30,7 +29,6 @@ DB_FILE = os.environ.get("DB_FILE", "iss.db")
 OWNER_EMAIL = os.environ["OWNER_EMAIL"]
 OWNER_USERNAME = os.environ.get("OWNER_USERNAME", "owner")
 OWNER_PASSWORD = os.environ["OWNER_PASSWORD"]
-DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
 BOT_TOKEN = os.environ.get("DISCORD_BOT_TOKEN")
 
 limiter = Limiter(get_remote_address, app=app,
@@ -71,6 +69,7 @@ def init_db():
     CREATE TABLE IF NOT EXISTS tickets(
         id INTEGER PRIMARY KEY AUTOINCREMENT, license_key TEXT,
         subject TEXT, status TEXT DEFAULT 'open', created TEXT);
+    CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT);
     CREATE TABLE IF NOT EXISTS ticket_messages(
         id INTEGER PRIMARY KEY AUTOINCREMENT, ticket_id INTEGER,
         sender TEXT, body TEXT, created TEXT);
@@ -87,18 +86,25 @@ def now():
 
 
 # ------------------------------------------------------------------
-# Discord webhook (আলাদা থ্রেডে, যাতে সার্ভার আটকে না যায়)
+# ডিসকর্ড অ্যালার্ট (বট নিজেই নির্ধারিত চ্যানেলে পাঠায়, ওয়েবহুক লাগে না)
 # ------------------------------------------------------------------
 def send_discord_alert(text):
-    if not DISCORD_WEBHOOK_URL:
-        return
+    try:
+        if not bot.is_ready():
+            return
+        conn = connect()
+        row = conn.execute("SELECT value FROM settings WHERE key='alert_channel'").fetchone()
+        conn.close()
+        if not row:
+            return
 
-    def _send():
-        try:
-            requests.post(DISCORD_WEBHOOK_URL, json={"content": text}, timeout=5)
-        except Exception:
-            pass
-    threading.Thread(target=_send, daemon=True).start()
+        async def _send():
+            ch = bot.get_channel(int(row["value"]))
+            if ch:
+                await ch.send(text)
+        asyncio.run_coroutine_threadsafe(_send(), bot.loop)
+    except Exception as e:
+        print(f"Alert error: {e}")
 
 
 # ------------------------------------------------------------------
@@ -481,19 +487,33 @@ def health():
 
 
 # ------------------------------------------------------------------
-# Discord bot
+# Discord bot (সব কমান্ড শুধু সার্ভারের Administrator-দের জন্য)
 # ------------------------------------------------------------------
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 
-def stats():
+def q_one(sql, args=()):
     conn = connect()
-    lic = conn.execute("SELECT COUNT(*) FROM licenses").fetchone()[0]
-    open_t = conn.execute("SELECT COUNT(*) FROM tickets WHERE status='open'").fetchone()[0]
+    v = conn.execute(sql, args).fetchone()[0]
     conn.close()
-    return lic, open_t
+    return v
+
+
+def q_all(sql, args=()):
+    conn = connect()
+    rows = conn.execute(sql, args).fetchall()
+    conn.close()
+    return rows
+
+
+def admin_cmd(name):
+    def deco(fn):
+        fn = commands.has_permissions(administrator=True)(fn)
+        fn = commands.guild_only()(fn)
+        return bot.command(name=name)(fn)
+    return deco
 
 
 @bot.event
@@ -501,16 +521,94 @@ async def on_ready():
     print(f"Discord Bot logged in as {bot.user.name}")
 
 
-@bot.command(name="report")
-async def bot_report(ctx):
-    lic, open_t = stats()
-    await ctx.send(f"🛡️ ISS Report: system active. Licenses: {lic} | Open tickets: {open_t}")
+@bot.event
+async def on_command_error(ctx, err):
+    if isinstance(err, commands.MissingPermissions):
+        await ctx.send("⛔ শুধু সার্ভারের Administrator এই কমান্ড চালাতে পারবে।")
+    elif isinstance(err, commands.MissingRequiredArgument):
+        await ctx.send(f"⚠️ কমান্ড অসম্পূর্ণ। নিয়ম: `!help {ctx.command.name}`")
+    elif isinstance(err, (commands.CommandNotFound, commands.NoPrivateMessage)):
+        return
+    else:
+        print(f"Command error: {err}")
+        await ctx.send("⚠️ কিছু একটা সমস্যা হয়েছে।")
 
 
-@bot.command(name="weekly_report")
-async def bot_weekly_report(ctx):
-    lic, open_t = stats()
-    await ctx.send(f"📈 ISS Weekly Report: {lic} active licenses, {open_t} open tickets.")
+@admin_cmd("report")
+async def report(ctx):
+    lic = q_one("SELECT COUNT(*) FROM licenses")
+    op = q_one("SELECT COUNT(*) FROM tickets WHERE status='open'")
+    await ctx.send(f"🛡️ ISS Report: system active.\nLicenses: {lic} | Open tickets: {op}")
+
+
+@admin_cmd("weekly_report")
+async def weekly_report(ctx):
+    since = (datetime.utcnow() - timedelta(days=7)).strftime("%Y-%m-%d %H:%M")
+    nl = q_one("SELECT COUNT(*) FROM licenses WHERE created>=?", (since,))
+    nt = q_one("SELECT COUNT(*) FROM tickets WHERE created>=?", (since,))
+    op = q_one("SELECT COUNT(*) FROM tickets WHERE status='open'")
+    await ctx.send(f"📈 ISS Weekly Report (7 days)\nNew licenses: {nl} | New tickets: {nt} | Open tickets now: {op}")
+
+
+@admin_cmd("setalert")
+async def setalert(ctx):
+    """যে চ্যানেলে লিখবেন, অ্যালার্ট সেখানে আসবে"""
+    conn = connect()
+    conn.execute("INSERT OR REPLACE INTO settings VALUES('alert_channel', ?)", (str(ctx.channel.id),))
+    conn.commit()
+    conn.close()
+    await ctx.send("✅ এখন থেকে অ্যালার্ট এই চ্যানেলে আসবে।")
+
+
+@admin_cmd("licenses")
+async def licenses_cmd(ctx):
+    rows = q_all("SELECT key,name,org,plan,expiry FROM licenses ORDER BY created DESC LIMIT 15")
+    if not rows:
+        return await ctx.send("কোনো লাইসেন্স নেই।")
+    lines = [f"`{r['key']}` | {r['name']} ({r['org']}) | {r['plan']} | {r['expiry']}" for r in rows]
+    await ctx.send("🔑 **Licenses (সর্বশেষ ১৫টি)**\n" + "\n".join(lines))
+
+
+@admin_cmd("newlicense")
+async def newlicense(ctx, name: str, org: str, plan: str = "Basic", days: int = 365):
+    """ব্যবহার: !newlicense "Client Name" "Organization" Pro 365"""
+    if not 1 <= days <= 3650:
+        return await ctx.send("⚠️ days ১ থেকে ৩৬৫০ এর মধ্যে দিন।")
+    key = "KEY-" + secrets.token_hex(6).upper()
+    user = "client" + secrets.token_hex(2)
+    pwd = secrets.token_urlsafe(9)
+    expiry = (date.today() + timedelta(days=days)).isoformat()
+    try:
+        await ctx.author.send(
+            f"🔑 **নতুন লাইসেন্স**\nClient: {name} ({org}) | Plan: {plan}\n"
+            f"License Key: `{key}`\nUsername: `{user}`\nPassword: `{pwd}`\nExpiry: {expiry}")
+    except discord.Forbidden:
+        return await ctx.send("⚠️ আপনার DM বন্ধ। DM চালু করে আবার চেষ্টা করুন (পাসওয়ার্ড শুধু DM-এ যায়)।")
+    conn = connect()
+    conn.execute("INSERT INTO licenses VALUES(?,?,?,?,?,?,?,?,?)",
+                 (key, name, org, expiry, 5, plan, user, generate_password_hash(pwd), now()))
+    conn.commit()
+    conn.close()
+    await ctx.send(f"✅ লাইসেন্স `{key}` তৈরি হয়েছে। লগইনের তথ্য আপনার DM-এ পাঠানো হয়েছে।")
+
+
+@admin_cmd("deletelicense")
+async def deletelicense(ctx, key: str):
+    conn = connect()
+    cur = conn.execute("DELETE FROM licenses WHERE key=?", (key,))
+    conn.commit()
+    conn.close()
+    await ctx.send("🗑️ মুছে ফেলা হয়েছে।" if cur.rowcount else "⚠️ এই কী পাওয়া যায়নি।")
+
+
+@admin_cmd("tickets")
+async def tickets_cmd(ctx):
+    rows = q_all("""SELECT t.id,t.subject,t.created,l.org FROM tickets t
+        LEFT JOIN licenses l ON l.key=t.license_key WHERE t.status='open' ORDER BY t.id DESC LIMIT 15""")
+    if not rows:
+        return await ctx.send("✅ কোনো খোলা টিকিট নেই।")
+    lines = [f"#{r['id']} | {r['org']} | {r['subject']} | {r['created']}" for r in rows]
+    await ctx.send("🎫 **Open tickets**\n" + "\n".join(lines))
 
 
 def run_discord_bot():
